@@ -305,13 +305,15 @@
             didn't provide enough information. The model was also told to output only a severity integer via
             <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/">structured output</a>
             (JSON schema), so there were no free-text responses to parse. Scoring was done at temperature&nbsp;0
-            for determinism — the same input always produces the same score.</p>
+            for determinism — the same input always produces the same score.
+        </p>
 
         <p>Issues scored severity&nbsp;0 — feature requests, spam, off-topic rants about AI, empty submissions — are
             excluded from bug counts by default. This matters because some releases attracted a lot of noise on
             GitHub. v3.4.2 had four issues filed; the model scored all four at severity&nbsp;0 (a feature-request
             option, a missing tarball question, and two more feature requests). That's not missing data — it's
-            <em>signal</em>: zero real bugs were reported against that release.</p>
+            <em>signal</em>: zero real bugs were reported against that release.
+        </p>
 
         <p>Example scores from the database, one per tier:</p>
 
@@ -500,7 +502,8 @@
             This is another way of saying the same thing the previous two tests said, but more
             intuitively: the Claude releases (green dots) <strong>bracket the IQR in opposite directions</strong>. v3.4.2, with zero real
             bugs, sits just below the IQR; v3.4.3 sits just above it. They bracket the middle of the distribution
-            in opposite directions. Neither is an outlier.
+            in opposite directions. Neither is a negative outlier, and since they're on either side of the IQR, there's
+            no evidence Claude usage bends releases in either direction.
         </p>
 
         <h3>Regime Check</h3>
@@ -568,7 +571,8 @@
         <p>We can further test whether there are meaningfully different regimes in the version history, and thus
             whether using the full historical data is valid, by doing a
             <a href="https://en.wikipedia.org/wiki/Wald%E2%80%93Wolfowitz_runs_test">runs test</a>.
-            If such regimes existed, the runs test would detect non-random clustering:</p>
+            If such regimes existed, the runs test would detect non-random clustering:
+        </p>
 
         <div class="result-callout">
             <div class="result-number">p=0.060</div>
@@ -685,7 +689,8 @@
                 <div class="score-body">
                     <div class="score-claim">"The Claude releases are statistically indistinguishable from historical
                         releases"</div>
-                    <div class="score-evidence">One Claude release sits just below the IQR (v3.4.2, with zero real bugs), the other just above it.
+                    <div class="score-evidence">One Claude release sits just below the IQR (v3.4.2, with zero real
+                        bugs), the other just above it.
                         They bracket the middle of the distribution in opposite directions — neither is an outlier.
                         The exact permutation test yields a p-value of <strong>46%</strong> — pick any
                         2 releases at random and you'd do as bad or worse nearly half the time.
@@ -721,7 +726,8 @@
                 <div class="score-verdict no">✗</div>
                 <div class="score-body">
                     <div class="score-claim">"Claude clearly made things worse"</div>
-                    <div class="score-evidence">The Claude releases bracket the IQR — one below, one above. Neither is an outlier.
+                    <div class="score-evidence">The Claude releases bracket the IQR — one below, one above. Neither is
+                        an outlier.
                         There is no distributional evidence of harm. The claim rests entirely on a post-hoc correlation
                         observed by a social media user.</div>
                 </div>
@@ -757,6 +763,7 @@
 
     <div class="closing">
         <div class="page">
+            <h2>Discussion, and Tridge's Response</h2>
             <p>So, why do people feel like they've been betrayed? A lot of it is just sheer, blind outrage at the use of
                 LLMs. However, there are some confounders that might have caused people to feel that way:</p>
 
