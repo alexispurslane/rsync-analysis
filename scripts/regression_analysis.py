@@ -883,7 +883,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <h3>How bugs are found and attributed</h3>
 
-<p>Bug counts come from three sources: GitHub issues in the rsync repository, the rsync Bugzilla instance, and the rsync mailing list. Issues filed against the rsync project were collected via the GitHub REST API. Bugs from the mailing list were identified by parsing message subjects for bug report patterns and cross-referencing with the project's issue tracking. Bugzilla entries were collected via the Bugzilla API. Each bug is attributed to the most recent release that shipped before the bug was reported.</p>
+<p>Bug counts come from three sources: GitHub issues in the rsync repository, the rsync Bugzilla instance, and the rsync mailing list. Issues filed against the rsync project were collected via the GitHub REST API. Bugs from the mailing list were identified by parsing message subjects for bug report patterns and cross-referencing with the project's issue tracking. Bugzilla entries were collected via the Bugzilla API; each entry has a "Version" field that explicitly states which release the bug was reported against, and bugs are attributed to that release. GitHub issues and mailing-list bugs are attributed to the most recent release that shipped before the bug was reported.</p>
 
 <h3>Why this metric</h3>
 
