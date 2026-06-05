@@ -974,9 +974,10 @@ bugs/10c = (bug_count ÷ total_commits) × 10
   <div class="result-detail">
     The highest bug rate in the entire dataset. 102 bugs in 9 commits, a hotfix release
     the day after v3.4.0. It exceeds every other release by an order of magnitude.
-    <strong>Nobody noticed.</strong> There was no AI to blame, no GitHub issue with 300 comments,
-    no death threats. A maintainer shipped a broken release and fixed it. This happens.
-    The only thing that made v3.4.3 special was the availability of an enemy.
+    <strong>Nobody noticed.</strong> There was no AI to blame <strong>so</strong> there was no GitHub issue with
+    300 comments, no death threats, no threats to fork or move to openrsync. A maintainer
+    shipped a broken release and fixed it. This happens. The only thing that made v3.4.3
+    special was the availability of an enemy <em>everyone had already decided to hate</em>.
   </div>
 </div>
 
