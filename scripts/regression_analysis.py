@@ -903,6 +903,34 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <h2>4 · Results</h2>
 
+<h3>Claude Releases</h3>
+
+<div class="g">
+  {claude_cards}
+</div>
+<div class="mean-bar">
+  <span class="label">Claude mean:</span> <span class="val claude">{claude_mean:.2f}</span>
+  <span class="vs">vs</span>
+  <span class="label">Historical mean:</span> <span class="val hist">{hist_mean:.2f}</span>
+  <span class="vs">({'{:.1f}×'.format(claude_mean / hist_mean) if hist_mean > 0 else 'N/A'})</span>
+</div>
+
+<h3>How Normal Are the Claude Releases?</h3>
+
+<div class="result-callout">
+  <div class="result-number">{p_value:.0%}</div>
+  <div class="result-label">of random pairs match or exceed the Claude mean</div>
+  <div class="result-detail">
+    {n_extreme} of {n_total} possible pairs of 2 historical releases have mean bugs/10c
+    ≥ {claude_mean:.2f}. Nearly half. The Claude releases sit exactly where most pairs land —
+    the middle of the distribution, not the tail.
+    <br><br>
+    <span style="font-family:var(--mono);font-size:0.85rem">
+    Claude mean: {claude_mean:.2f} · Historical mean: {hist_mean:.2f} · IQR: {q25:.2f}–{q75:.2f}
+    </span>
+  </div>
+</div>
+
 <h3>The Distribution (log scale)</h3>
 
 <div class="strip">
@@ -932,39 +960,25 @@ bugs/10c = (bug_count ÷ total_commits) × 10
   their bug rates are indistinguishable from the typical historical range.
 </p>
 
-<h3>Claude Releases</h3>
-
-<div class="g">
-  {claude_cards}
-</div>
-<div class="mean-bar">
-  <span class="label">Claude mean:</span> <span class="val claude">{claude_mean:.2f}</span>
-  <span class="vs">vs</span>
-  <span class="label">Historical mean:</span> <span class="val hist">{hist_mean:.2f}</span>
-  <span class="vs">({'{:.1f}×'.format(claude_mean / hist_mean) if hist_mean > 0 else 'N/A'})</span>
-</div>
-
-<h3>How Normal Are the Claude Releases?</h3>
-
-<div class="result-callout">
-  <div class="result-number">{n_extreme} of {n_total}</div>
-  <div class="result-label">random pairs have mean ≥ Claude's {claude_mean:.2f}</div>
-  <div class="result-detail">
-    <strong>{p_value:.0%}</strong> of all possible pairs of 2 releases from the historical
-    distribution score the same or higher. The Claude mean sits in the middle of the
-    pack — not low, not high, just where most pairs land.
-    <br><br>
-    <span style="font-family:var(--mono);font-size:0.85rem">
-    Claude mean: {claude_mean:.2f} · Historical mean: {hist_mean:.2f} · IQR: {q25:.2f}–{q75:.2f}
-    </span>
-  </div>
-</div>
-
 <h3>Regime Check</h3>
 
 <p>The historical mean is {hist_mean:.2f} bugs/10c, but this is driven by a bimodal distribution. v2.x releases average {v2_mean:.2f} bugs/10c; v3.x releases average {v3_mean:.2f}. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 16th of 21 v3.x releases, v3.4.3 ranks 16th as well.</p>
 
 <p>A runs test on the {len(nc_data)} non-Claude releases finds {runs} runs (expected {exp_runs:.1f} under randomness, z={z_runs:.2f}, <strong>p={p_runs:.3f}</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
+
+<h3>The Outlier Nobody Noticed</h3>
+
+<div class="result-callout">
+  <div class="result-number">113.33</div>
+  <div class="result-label">bugs per 10 commits — v3.4.1, no Claude</div>
+  <div class="result-detail">
+    The highest bug rate in the entire dataset. 102 bugs in 9 commits, a hotfix release
+    the day after v3.4.0. It exceeds every other release by an order of magnitude.
+    <strong>Nobody noticed.</strong> There was no AI to blame, no GitHub issue with 300 comments,
+    no death threats. A maintainer shipped a broken release and fixed it. This happens.
+    The only thing that made v3.4.3 special was the availability of an enemy.
+  </div>
+</div>
 
 <h3>All Releases (chronological)</h3>
 

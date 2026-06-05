@@ -730,6 +730,34 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <h2>4 · Results</h2>
 
+<h3>Claude Releases</h3>
+
+<div class="g">
+  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31th percentile (rank 11 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div>
+</div>
+<div class="mean-bar">
+  <span class="label">Claude mean:</span> <span class="val claude">3.78</span>
+  <span class="vs">vs</span>
+  <span class="label">Historical mean:</span> <span class="val hist">7.60</span>
+  <span class="vs">(0.5×)</span>
+</div>
+
+<h3>How Normal Are the Claude Releases?</h3>
+
+<div class="result-callout">
+  <div class="result-number">46%</div>
+  <div class="result-label">of random pairs match or exceed the Claude mean</div>
+  <div class="result-detail">
+    271 of 595 possible pairs of 2 historical releases have mean bugs/10c
+    ≥ 3.78. Nearly half. The Claude releases sit exactly where most pairs land —
+    the middle of the distribution, not the tail.
+    <br><br>
+    <span style="font-family:var(--mono);font-size:0.85rem">
+    Claude mean: 3.78 · Historical mean: 7.60 · IQR: 0.65–6.82
+    </span>
+  </div>
+</div>
+
 <h3>The Distribution (log scale)</h3>
 
 <div class="strip">
@@ -802,39 +830,25 @@ bugs/10c = (bug_count ÷ total_commits) × 10
   their bug rates are indistinguishable from the typical historical range.
 </p>
 
-<h3>Claude Releases</h3>
-
-<div class="g">
-  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31th percentile (rank 11 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div>
-</div>
-<div class="mean-bar">
-  <span class="label">Claude mean:</span> <span class="val claude">3.78</span>
-  <span class="vs">vs</span>
-  <span class="label">Historical mean:</span> <span class="val hist">7.60</span>
-  <span class="vs">(0.5×)</span>
-</div>
-
-<h3>How Normal Are the Claude Releases?</h3>
-
-<div class="result-callout">
-  <div class="result-number">271 of 595</div>
-  <div class="result-label">random pairs have mean ≥ Claude's 3.78</div>
-  <div class="result-detail">
-    <strong>46%</strong> of all possible pairs of 2 releases from the historical
-    distribution score the same or higher. The Claude mean sits in the middle of the
-    pack — not low, not high, just where most pairs land.
-    <br><br>
-    <span style="font-family:var(--mono);font-size:0.85rem">
-    Claude mean: 3.78 · Historical mean: 7.60 · IQR: 0.65–6.82
-    </span>
-  </div>
-</div>
-
 <h3>Regime Check</h3>
 
 <p>The historical mean is 7.60 bugs/10c, but this is driven by a bimodal distribution. v2.x releases average 2.04 bugs/10c; v3.x releases average 11.46. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 16th of 21 v3.x releases, v3.4.3 ranks 16th as well.</p>
 
 <p>A runs test on the 35 non-Claude releases finds 14 runs (expected 18.5 under randomness, z=-1.54, <strong>p=0.123</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
+
+<h3>The Outlier Nobody Noticed</h3>
+
+<div class="result-callout">
+  <div class="result-number">113.33</div>
+  <div class="result-label">bugs per 10 commits — v3.4.1, no Claude</div>
+  <div class="result-detail">
+    The highest bug rate in the entire dataset. 102 bugs in 9 commits, a hotfix release
+    the day after v3.4.0. It exceeds every other release by an order of magnitude.
+    <strong>Nobody noticed.</strong> There was no AI to blame, no GitHub issue with 300 comments,
+    no death threats. A maintainer shipped a broken release and fixed it. This happens.
+    The only thing that made v3.4.3 special was the availability of an enemy.
+  </div>
+</div>
 
 <h3>All Releases (chronological)</h3>
 
