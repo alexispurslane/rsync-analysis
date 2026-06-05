@@ -285,7 +285,7 @@
             <div class="result-label">of random pairs match or exceed the Claude mean</div>
             <div class="result-detail">
                 $n_extreme of $n_total possible pairs of 2 historical releases have mean bugs/10c
-                ≥ $claude_mean_str. Nearly half. The Claude releases sit exactly where most pairs land:
+                ≥ $claude_mean_str. Nearly half. The Claude releases land well within the range of where most pairs land:
                 the middle of the distribution.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
@@ -294,7 +294,7 @@
             </div>
         </div>
 
-        <p>In other words: pretty fucking normal.</p>
+        <p>In other words: nothing unusual here.</p>
 
         <h3>The Distribution</h3>
 
@@ -346,8 +346,8 @@
             which is the exact <i>opposite</i> of the kind of difference that would hurt the case of this paper and make
             Claude-exposed releases more likely to be outliers.</p>
 
-        <p>We can further prove that there aren't meaningfully different regimes in the version history we have, and
-            thus that using the full historical data is valid, by doing a runs test. A runs test on the $nc_count
+        <p>We can further test whether there are meaningfully different regimes in the version history we have, and
+            thus whether using the full historical data is valid, by doing a runs test. If such regimes existed, the runs test would likely detect non-random clustering — it doesn't. A runs test on the $nc_count
             non-Claude releases finds $runs runs (expected $exp_runs_str under randomness,
             z=$z_runs_str, <strong>p=$p_runs_str</strong>). There is no evidence of temporal clustering, in other words.
             The sequence
@@ -433,11 +433,11 @@
             <div class="score-row">
                 <div class="score-verdict weak">∓</div>
                 <div class="score-body">
-                    <div class="score-claim">"Claude may have reduced the bug rate"</div>
+                    <div class="score-claim">"Claude may not have affected the bug rate"</div>
                     <div class="score-evidence">The Claude mean ($claude_mean_str) is $hist_claude_ratio_desc_str the
                         historical mean ($hist_mean_str). But with only $n_claude_releases releases, this difference is
-                        not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude. It
-                            can tell us the direction: not harmful.</strong></div>
+                        not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude or the
+                            direction of any real effect. It can only tell us that there is no evidence of harm.</strong></div>
                 </div>
             </div>
 
