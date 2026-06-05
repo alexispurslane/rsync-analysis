@@ -162,17 +162,21 @@ def generate_report(releases: list[dict]) -> str:
             f'</div>'
         )
 
+    # Percentiles for all releases (against historical distribution)
+    for r in sorted_data:
+        if "percentile" not in r:
+            r["percentile"] = np.searchsorted(hist_rates, r["bugs_10c"]) / len(hist_rates) * 100
+
     # Table rows
     table_rows = ""
     for r in sorted_data:
         is_c = r["is_claude"]
-        pctile = f'{ordinal(int(round(r["percentile"])))} percentile' if is_c else ""
+        pctile = f'{ordinal(int(round(r["percentile"])))} percentile'
         table_rows += (
             f'<tr class="{"claude-era" if is_c else ""}">'
             f'<td class="rel">{r["tag"]}</td>'
             f'<td class="n">{r["bugs"]}</td>'
             f'<td class="n">{r["commits"]}</td>'
-            f'<td class="n">{r["wt_sec"]:.1f}</td>'
             f'<td class="n">{r["claude"]}</td>'
             f'<td class="n rate">{r["bugs_10c"]:.2f}</td>'
             f'<td class="era">{pctile}</td></tr>\n          '
