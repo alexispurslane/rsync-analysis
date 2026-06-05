@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bugs/1Kc Distribution — rsync</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{--bg:#faf6f0;--fg:#3c2a1a;--muted:#7a6b5d;--accent:#b44a1e;--pos:#2d6a4f;--bdr:#d9cfc4;--s:'Inter',sans-serif;--m:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}html{font-size:17px}
+body{font-family:var(--s);color:var(--fg);background:var(--bg);line-height:1.7;max-width:920px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:1.8rem;font-weight:700;margin-bottom:.5rem}
+h2{font-size:1.3rem;font-weight:600;margin:2.5rem 0 .75rem;color:var(--accent)}
+p{margin-bottom:.75rem}.sub{color:var(--muted);font-size:.95rem;margin-bottom:2rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin:1rem 0}
+th{text-align:left;font-weight:600;padding:.4rem .6rem;border-bottom:2px solid var(--bdr);color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+td{padding:.35rem .6rem;border-bottom:1px solid var(--bdr)}
+td.n{text-align:right;font-family:var(--m);font-size:.82rem}
+td.rel{font-family:var(--m);font-weight:500}
+td.rate{font-weight:600}
+tr.claude-era{background:rgba(45,106,79,.08)}
+td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0}
+.c{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:1.25rem}
+.c h3{font-size:.95rem;color:var(--fg);margin:0 0 .5rem 0;font-weight:600}
+.c .b{font-size:2.2rem;font-weight:700;font-family:var(--m)}
+.c .u{font-size:.85rem;color:var(--muted);font-weight:400}
+.c .d{font-size:.85rem;color:var(--muted);margin-top:.25rem}
+.c .pctile{color:var(--pos);font-weight:600;margin-top:.5rem;font-size:.95rem}
+.c .iqr-tag{color:var(--pos);font-weight:700;margin-top:.5rem;font-size:.95rem}
+
+/* ── Strip chart ── */
+.strip{
+  position:relative;height:100px;margin:2.5rem 0 .5rem;
+  background:#fff;border-radius:6px;border:1px solid var(--bdr);
+}
+/* Greyed-out outside-IQR regions */
+.outside{
+  position:absolute;top:0;bottom:0;
+  background:rgba(0,0,0,.22);pointer-events:none;z-index:0;
+}
+/* IQR green band */
+.iqr{
+  position:absolute;top:0;bottom:0;
+  background:rgba(45,106,79,.22);
+  border-left:4px solid var(--pos);border-right:4px solid var(--pos);
+  pointer-events:none;z-index:0;
+}
+/* "middle 50%" centered label inside the band */
+.iqr-center{
+  position:absolute;top:-18px;transform:translateX(-50%);
+  font-size:.85rem;font-family:var(--m);font-weight:800;
+  color:var(--pos);letter-spacing:.1em;text-transform:uppercase;opacity:.5;
+  pointer-events:none;z-index:1;white-space:nowrap;
+}
+/* Q1/Q3 boundary labels at the edges */
+.q-label{
+  position:absolute;bottom:4px;transform:translateX(-50%);
+  pointer-events:none;z-index:4;text-align:center;
+}
+.q-val{
+  display:inline-block;font-size:.7rem;color:var(--pos);
+  font-family:var(--m);font-weight:800;
+  background:var(--bg);padding:2px 6px;
+  border:2px solid var(--pos);border-radius:4px;
+}
+/* Median line */
+.med{
+  position:absolute;top:0;bottom:0;width:2px;
+  background:var(--pos);opacity:.3;pointer-events:none;
+  transform:translateX(-50%);z-index:0;
+}
+/* Dots */
+.dot{
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  border-radius:50%;cursor:help;z-index:1;opacity:.35;
+}
+.dot.claude-dot{
+  opacity:1;z-index:2;
+  box-shadow:0 0 0 3px rgba(45,106,79,.3);
+}
+/* Claude dot labels */
+.dot-tag{
+  position:absolute;top:calc(50% + 18px);transform:translateX(-50%);
+  font-size:.7rem;font-family:var(--m);font-weight:800;
+  color:var(--pos);text-align:center;line-height:1.3;
+  pointer-events:none;white-space:nowrap;z-index:3;
+}
+.dot-tag .badge{
+  display:inline-block;font-size:.55rem;font-weight:700;
+  color:#fff;background:var(--pos);
+  padding:1px 5px;border-radius:3px;margin-left:3px;
+  vertical-align:middle;
+}
+.axis{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--m);margin-top:4px}
+.legend{display:flex;gap:1.5rem;margin-top:.75rem;font-size:.85rem;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem;vertical-align:middle}
+
+/* ── Time-series chart ── */
+.ts-chart{width:100%;height:340px;margin:2rem 0 .5rem;background:#fff;border-radius:6px;border:1px solid var(--bdr);overflow:visible}
+.ts-bar{cursor:help}
+.ts-label{font-size:.65rem;font-family:var(--m);font-weight:700;fill:var(--pos);text-anchor:middle}
+.ts-y-label{font-size:.6rem;fill:var(--muted);font-family:var(--m);dominant-baseline:hanging}
+.ts-x-label{font-size:.55rem;fill:var(--muted);font-family:var(--m);text-anchor:end}
+.ts-grid{stroke:var(--bdr);stroke-width:.5;stroke-dasharray:4 3}
+</style></head><body>
+
+<h1>Bugs per 1,000 Commits</h1>
+<p class="sub">rsync releases with bug data · Where do the Claude releases sit in the distribution?</p>
+
+<h2>The Distribution (log scale)</h2>
+<div class="strip">
+  <div class="outside" style="right:59.8%"></div>
+  <div class="outside" style="left:63.0%"></div>
+  <div class="iqr" style="left:40.2%;width:22.7%"></div>
+  <div class="iqr-center" style="left:51.6%">middle 50%</div>
+  <div class="med" style="left:49.4%"></div>
+  <div class="dot" style="left:48.6%;background:#b44a1e;width:11px;height:11px" title="v2.4.6: 154 bugs/1Kc"></div>
+  <div class="dot" style="left:38.6%;background:#b44a1e;width:11px;height:11px" title="v2.5.0: 55 bugs/1Kc"></div>
+  <div class="dot" style="left:39.2%;background:#b44a1e;width:11px;height:11px" title="v2.5.1: 58 bugs/1Kc"></div>
+  <div class="dot" style="left:38.0%;background:#b44a1e;width:11px;height:11px" title="v2.5.2: 51 bugs/1Kc"></div>
+  <div class="dot" style="left:52.8%;background:#b44a1e;width:11px;height:11px" title="v2.5.4: 238 bugs/1Kc"></div>
+  <div class="dot" style="left:53.3%;background:#b44a1e;width:11px;height:11px" title="v2.5.5: 250 bugs/1Kc"></div>
+  <div class="dot" style="left:39.3%;background:#b44a1e;width:11px;height:11px" title="v2.5.6: 59 bugs/1Kc"></div>
+  <div class="dot" style="left:32.8%;background:#b44a1e;width:11px;height:11px" title="v2.6.0: 30 bugs/1Kc"></div>
+  <div class="dot" style="left:23.4%;background:#b44a1e;width:11px;height:11px" title="v2.6.1: 11 bugs/1Kc"></div>
+  <div class="dot" style="left:71.8%;background:#b44a1e;width:11px;height:11px" title="v2.6.2: 1706 bugs/1Kc"></div>
+  <div class="dot" style="left:46.9%;background:#b44a1e;width:11px;height:11px" title="v2.6.3: 129 bugs/1Kc"></div>
+  <div class="dot" style="left:32.5%;background:#b44a1e;width:11px;height:11px" title="v2.6.4: 29 bugs/1Kc"></div>
+  <div class="dot" style="left:45.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.5: 110 bugs/1Kc"></div>
+  <div class="dot" style="left:30.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.7: 23 bugs/1Kc"></div>
+  <div class="dot" style="left:49.4%;background:#b44a1e;width:11px;height:11px" title="v2.6.8: 167 bugs/1Kc"></div>
+  <div class="dot" style="left:51.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.9: 203 bugs/1Kc"></div>
+  <div class="dot" style="left:41.1%;background:#b44a1e;width:11px;height:11px" title="v3.0.0: 70 bugs/1Kc"></div>
+  <div class="dot" style="left:39.3%;background:#b44a1e;width:11px;height:11px" title="v3.0.1: 59 bugs/1Kc"></div>
+  <div class="dot" style="left:67.7%;background:#b44a1e;width:11px;height:11px" title="v3.0.2: 1111 bugs/1Kc"></div>
+  <div class="dot" style="left:57.8%;background:#b44a1e;width:11px;height:11px" title="v3.0.3: 400 bugs/1Kc"></div>
+  <div class="dot" style="left:55.0%;background:#b44a1e;width:11px;height:11px" title="v3.1.0: 298 bugs/1Kc"></div>
+  <div class="dot" style="left:67.0%;background:#b44a1e;width:11px;height:11px" title="v3.1.1: 1030 bugs/1Kc"></div>
+  <div class="dot" style="left:66.3%;background:#b44a1e;width:11px;height:11px" title="v3.1.2: 965 bugs/1Kc"></div>
+  <div class="dot" style="left:70.1%;background:#b44a1e;width:11px;height:11px" title="v3.1.3: 1426 bugs/1Kc"></div>
+  <div class="dot" style="left:42.2%;background:#b44a1e;width:11px;height:11px" title="v3.2.0: 79 bugs/1Kc"></div>
+  <div class="dot" style="left:47.9%;background:#b44a1e;width:11px;height:11px" title="v3.2.1: 143 bugs/1Kc"></div>
+  <div class="dot" style="left:56.4%;background:#b44a1e;width:11px;height:11px" title="v3.2.2: 345 bugs/1Kc"></div>
+  <div class="dot" style="left:67.3%;background:#b44a1e;width:11px;height:11px" title="v3.2.3: 1070 bugs/1Kc"></div>
+  <div class="dot" style="left:47.4%;background:#b44a1e;width:11px;height:11px" title="v3.2.4: 136 bugs/1Kc"></div>
+  <div class="dot" style="left:52.3%;background:#b44a1e;width:11px;height:11px" title="v3.2.5: 226 bugs/1Kc"></div>
+  <div class="dot" style="left:57.6%;background:#b44a1e;width:11px;height:11px" title="v3.2.6: 393 bugs/1Kc"></div>
+  <div class="dot" style="left:74.0%;background:#b44a1e;width:11px;height:11px" title="v3.2.7: 2133 bugs/1Kc"></div>
+  <div class="dot" style="left:73.4%;background:#b44a1e;width:11px;height:11px" title="v3.3.0: 2000 bugs/1Kc"></div>
+  <div class="dot" style="left:44.4%;background:#b44a1e;width:11px;height:11px" title="v3.4.0: 100 bugs/1Kc"></div>
+  <div class="dot" style="left:90.1%;background:#b44a1e;width:11px;height:11px" title="v3.4.1: 11333 bugs/1Kc"></div>
+  <div class="dot claude-dot" style="left:42.3%;background:#2d6a4f;width:18px;height:18px" title="v3.4.2: 80 bugs/1Kc"></div>
+  <div class="dot-tag" style="left:42.3%">v3.4.2<span class="badge">inside middle 50% ✓</span></div>
+  <div class="dot claude-dot" style="left:62.9%;background:#2d6a4f;width:18px;height:18px" title="v3.4.3: 676 bugs/1Kc"></div>
+  <div class="dot-tag" style="left:62.9%">v3.4.3<span class="badge">inside middle 50% ✓</span></div>
+</div>
+<div class="axis">
+  <span>1</span><span>10</span><span>100</span><span>1,000</span><span>10,000</span>
+</div>
+<div class="legend">
+  <span><i style="background:#b44a1e;opacity:.5"></i> Historical</span>
+  <span><i style="background:#2d6a4f"></i> Claude</span>
+  <span style="display:inline-flex;align-items:center;gap:4px">
+    <span style="display:inline-block;width:24px;height:12px;background:rgba(45,106,79,.1);border-left:3px solid #2d6a4f;border-right:3px solid #2d6a4f;vertical-align:middle"></span>
+    Middle 50% (IQR)
+  </span>
+  <span style="display:inline-flex;align-items:center;gap:4px">
+    <span style="display:inline-block;width:24px;height:12px;background:rgba(0,0,0,.1);vertical-align:middle"></span>
+    Outside IQR
+  </span>
+</div>
+
+<h2>Claude Releases</h2>
+<div class="g">
+  <div class="c"><h3>v3.4.2</h3><div class="b">80 <span class="u">bugs/1Kc</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31th percentile (rank 11 of 35)</div><div class="d iqr-tag">Inside the middle 50% (65–682)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">676 <span class="u">bugs/1Kc</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div><div class="d iqr-tag">Inside the middle 50% (65–682)</div></div>
+</div>
+
+<h2>WtSec/1Kc Over Time</h2>
+<svg class="ts-chart" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet">
+  <line x1="60" y1="250.0" x2="880" y2="250.0" class="ts-grid"/><text x="55" y="254.0" class="ts-y-label">0.1</text><line x1="60" y1="232.7" x2="880" y2="232.7" class="ts-grid"/><text x="55" y="236.7" class="ts-y-label">0.2</text><line x1="60" y1="209.8" x2="880" y2="209.8" class="ts-grid"/><text x="55" y="213.8" class="ts-y-label">0.5</text><line x1="60" y1="192.5" x2="880" y2="192.5" class="ts-grid"/><text x="55" y="196.5" class="ts-y-label">1</text><line x1="60" y1="175.2" x2="880" y2="175.2" class="ts-grid"/><text x="55" y="179.2" class="ts-y-label">2</text><line x1="60" y1="152.3" x2="880" y2="152.3" class="ts-grid"/><text x="55" y="156.3" class="ts-y-label">5</text><line x1="60" y1="135.0" x2="880" y2="135.0" class="ts-grid"/><text x="55" y="139.0" class="ts-y-label">10</text><line x1="60" y1="117.7" x2="880" y2="117.7" class="ts-grid"/><text x="55" y="121.7" class="ts-y-label">20</text><line x1="60" y1="94.8" x2="880" y2="94.8" class="ts-grid"/><text x="55" y="98.8" class="ts-y-label">50</text><line x1="60" y1="77.5" x2="880" y2="77.5" class="ts-grid"/><text x="55" y="81.5" class="ts-y-label">100</text><line x1="60" y1="60.2" x2="880" y2="60.2" class="ts-grid"/><text x="55" y="64.2" class="ts-y-label">200</text><line x1="60" y1="37.3" x2="880" y2="37.3" class="ts-grid"/><text x="55" y="41.3" class="ts-y-label">500</text><line x1="60" y1="20.0" x2="880" y2="20.0" class="ts-grid"/><text x="55" y="24.0" class="ts-y-label">1000</text><rect x="62.9" y="153.2" width="17.6" height="96.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v1.6.4: 4.8 WtSec/1Kc</title></rect>
+<text x="71.7" y="264.0" class="ts-x-label" transform="rotate(-40 71.7 264.0)">v1.6.4</text>
+<rect x="86.4" y="104.9" width="17.6" height="145.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v1.6.9: 33.3 WtSec/1Kc</title></rect>
+<rect x="109.8" y="112.1" width="17.6" height="137.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.11: 25.0 WtSec/1Kc</title></rect>
+<rect x="133.2" y="60.2" width="17.6" height="189.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.18: 200.0 WtSec/1Kc</title></rect>
+<rect x="156.6" y="83.1" width="17.6" height="166.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.4: 80.0 WtSec/1Kc</title></rect>
+<rect x="180.1" y="145.1" width="17.6" height="104.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.3.0: 6.7 WtSec/1Kc</title></rect>
+<text x="188.9" y="264.0" class="ts-x-label" transform="rotate(-40 188.9 264.0)">v2.3.0</text>
+<rect x="203.5" y="98.3" width="17.6" height="151.7" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.3.2: 43.5 WtSec/1Kc</title></rect>
+<rect x="226.9" y="143.4" width="17.6" height="106.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.4.0: 7.1 WtSec/1Kc</title></rect>
+<rect x="250.4" y="161.8" width="17.6" height="88.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.2: 3.4 WtSec/1Kc</title></rect>
+<rect x="273.8" y="120.4" width="17.6" height="129.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.3: 17.9 WtSec/1Kc</title></rect>
+<rect x="297.2" y="179.6" width="17.6" height="70.4" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.6: 1.7 WtSec/1Kc</title></rect>
+<rect x="320.6" y="155.0" width="17.6" height="95.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.0: 4.5 WtSec/1Kc</title></rect>
+<text x="329.4" y="264.0" class="ts-x-label" transform="rotate(-40 329.4 264.0)">v2.6.0</text>
+<rect x="344.1" y="146.5" width="17.6" height="103.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.1: 6.3 WtSec/1Kc</title></rect>
+<rect x="367.5" y="156.7" width="17.6" height="93.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.3: 4.2 WtSec/1Kc</title></rect>
+<rect x="390.9" y="181.1" width="17.6" height="68.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.4: 1.6 WtSec/1Kc</title></rect>
+<rect x="414.4" y="150.0" width="17.6" height="100.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.5: 5.5 WtSec/1Kc</title></rect>
+<rect x="437.8" y="154.3" width="17.6" height="95.7" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.7: 4.6 WtSec/1Kc</title></rect>
+<rect x="461.2" y="132.4" width="17.6" height="117.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.8: 11.1 WtSec/1Kc</title></rect>
+<rect x="484.6" y="164.5" width="17.6" height="85.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.9: 3.1 WtSec/1Kc</title></rect>
+<rect x="508.1" y="168.3" width="17.6" height="81.7" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.0: 2.6 WtSec/1Kc</title></rect>
+<text x="516.9" y="264.0" class="ts-x-label" transform="rotate(-40 516.9 264.0)">v3.0.0</text>
+<rect x="531.5" y="97.8" width="17.6" height="152.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.2: 44.4 WtSec/1Kc</title></rect>
+<rect x="554.9" y="143.0" width="17.6" height="107.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.3: 7.3 WtSec/1Kc</title></rect>
+<rect x="578.4" y="166.8" width="17.6" height="83.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.0: 2.8 WtSec/1Kc</title></rect>
+<text x="587.1" y="264.0" class="ts-x-label" transform="rotate(-40 587.1 264.0)">v3.1.0</text>
+<rect x="601.8" y="130.2" width="17.6" height="119.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.1: 12.1 WtSec/1Kc</title></rect>
+<rect x="625.2" y="121.0" width="17.6" height="129.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.2: 17.5 WtSec/1Kc</title></rect>
+<rect x="648.6" y="145.5" width="17.6" height="104.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.3: 6.6 WtSec/1Kc</title></rect>
+<rect x="672.1" y="121.6" width="17.6" height="128.4" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.0: 17.1 WtSec/1Kc</title></rect>
+<text x="680.9" y="264.0" class="ts-x-label" transform="rotate(-40 680.9 264.0)">v3.2.0</text>
+<rect x="695.5" y="151.8" width="17.6" height="98.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.3: 5.1 WtSec/1Kc</title></rect>
+<rect x="718.9" y="130.0" width="17.6" height="120.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.4: 12.2 WtSec/1Kc</title></rect>
+<rect x="742.4" y="119.1" width="17.6" height="130.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.5: 18.9 WtSec/1Kc</title></rect>
+<rect x="765.8" y="126.1" width="17.6" height="123.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.6: 14.3 WtSec/1Kc</title></rect>
+<rect x="789.2" y="116.4" width="17.6" height="133.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.3.0: 21.1 WtSec/1Kc</title></rect>
+<text x="798.0" y="264.0" class="ts-x-label" transform="rotate(-40 798.0 264.0)">v3.3.0</text>
+<rect x="812.6" y="104.9" width="17.6" height="145.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.4.0: 33.3 WtSec/1Kc</title></rect>
+<text x="821.4" y="264.0" class="ts-x-label" transform="rotate(-40 821.4 264.0)">v3.4.0</text>
+<rect x="836.1" y="80.7" width="17.6" height="169.3" fill="#2d6a4f" opacity="1" rx="1" class="ts-bar"><title>v3.4.2: 88.0 WtSec/1Kc</title></rect>
+<text x="844.9" y="76.7" class="ts-label">v3.4.2</text>
+<text x="844.9" y="264.0" class="ts-x-label" transform="rotate(-40 844.9 264.0)">v3.4.2</text>
+<rect x="859.5" y="40.1" width="17.6" height="209.9" fill="#2d6a4f" opacity="1" rx="1" class="ts-bar"><title>v3.4.3: 447.1 WtSec/1Kc</title></rect>
+<text x="868.3" y="36.1" class="ts-label">v3.4.3</text>
+<text x="868.3" y="264.0" class="ts-x-label" transform="rotate(-40 868.3 264.0)">v3.4.3</text>
+
+</svg>
+<div class="legend">
+  <span><i style="background:#b44a1e;opacity:.5"></i> Historical</span>
+  <span><i style="background:#2d6a4f"></i> Claude</span>
+</div>
+
+<h2>All Releases (chronological)</h2>
+<table>
+  <tr><th>Release</th><th>Bugs</th><th>Commits</th><th>WtSec</th><th>Claude</th><th>Bugs/1Kc</th><th>Percentile</th></tr>
+  <tr class=""><td class="rel">v2.4.6</td><td class="n">2</td><td class="n">13</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">153.8</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.0</td><td class="n">4</td><td class="n">73</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">54.8</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.1</td><td class="n">4</td><td class="n">69</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">58.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.2</td><td class="n">6</td><td class="n">117</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">51.3</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.4</td><td class="n">5</td><td class="n">21</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">238.1</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.5</td><td class="n">22</td><td class="n">88</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">250.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.5.6</td><td class="n">14</td><td class="n">239</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">58.6</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.0</td><td class="n">8</td><td class="n">267</td><td class="n">1.2</td><td class="n">0</td><td class="n rate">30.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.1</td><td class="n">5</td><td class="n">444</td><td class="n">2.8</td><td class="n">0</td><td class="n rate">11.3</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.2</td><td class="n">29</td><td class="n">17</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">1705.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.3</td><td class="n">49</td><td class="n">381</td><td class="n">1.6</td><td class="n">0</td><td class="n rate">128.6</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.4</td><td class="n">22</td><td class="n">760</td><td class="n">1.2</td><td class="n">0</td><td class="n rate">28.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.5</td><td class="n">16</td><td class="n">146</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">109.6</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.7</td><td class="n">15</td><td class="n">649</td><td class="n">3.0</td><td class="n">0</td><td class="n rate">23.1</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.8</td><td class="n">12</td><td class="n">72</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">166.7</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v2.6.9</td><td class="n">53</td><td class="n">261</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">203.1</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.0.0</td><td class="n">64</td><td class="n">909</td><td class="n">2.4</td><td class="n">0</td><td class="n rate">70.4</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.0.1</td><td class="n">6</td><td class="n">102</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">58.8</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.0.2</td><td class="n">10</td><td class="n">9</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">1111.1</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.0.3</td><td class="n">22</td><td class="n">55</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">400.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.1.0</td><td class="n">170</td><td class="n">571</td><td class="n">1.6</td><td class="n">0</td><td class="n rate">297.7</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.1.1</td><td class="n">68</td><td class="n">66</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">1030.3</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.1.2</td><td class="n">55</td><td class="n">57</td><td class="n">1.0</td><td class="n">0</td><td class="n rate">964.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.1.3</td><td class="n">87</td><td class="n">61</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">1426.2</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.0</td><td class="n">24</td><td class="n">304</td><td class="n">5.2</td><td class="n">0</td><td class="n rate">78.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.1</td><td class="n">9</td><td class="n">63</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">142.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.2</td><td class="n">20</td><td class="n">58</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">344.8</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.3</td><td class="n">168</td><td class="n">157</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">1070.1</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.4</td><td class="n">29</td><td class="n">213</td><td class="n">2.6</td><td class="n">0</td><td class="n rate">136.2</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.5</td><td class="n">12</td><td class="n">53</td><td class="n">1.0</td><td class="n">0</td><td class="n rate">226.4</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.6</td><td class="n">11</td><td class="n">28</td><td class="n">0.4</td><td class="n">0</td><td class="n rate">392.9</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.2.7</td><td class="n">128</td><td class="n">60</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">2133.3</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.3.0</td><td class="n">76</td><td class="n">38</td><td class="n">0.8</td><td class="n">0</td><td class="n rate">2000.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.4.0</td><td class="n">6</td><td class="n">60</td><td class="n">2.0</td><td class="n">0</td><td class="n rate">100.0</td><td class="era"></td></tr>
+          <tr class=""><td class="rel">v3.4.1</td><td class="n">102</td><td class="n">9</td><td class="n">0.0</td><td class="n">0</td><td class="n rate">11333.3</td><td class="era"></td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.2</td><td class="n">4</td><td class="n">50</td><td class="n">4.4</td><td class="n">9</td><td class="n rate">80.0</td><td class="era">31th</td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.3</td><td class="n">23</td><td class="n">34</td><td class="n">15.2</td><td class="n">28</td><td class="n rate">676.5</td><td class="era">74th</td></tr>
+          
+</table>
+
+</body></html>
