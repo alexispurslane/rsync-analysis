@@ -885,8 +885,6 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <p>Bug counts come from three sources: GitHub issues in the rsync repository, the rsync Bugzilla instance, and the rsync mailing list. Issues filed against the rsync project were collected via the GitHub REST API. Bugs from the mailing list were identified by parsing message subjects for bug report patterns and cross-referencing with the project's issue tracking. Bugzilla entries were collected via the Bugzilla API. Each bug is attributed to the most recent release that shipped before the bug was reported.</p>
 
-<p>This metric is agnostic to <em>what kind</em> of bugs or <em>what kind</em> of commits. It does not classify regressions by confidence. It does not weight security commits. It treats every release as a single data point with two numbers: bugs and commits.</p>
-
 <h3>Why this metric</h3>
 
 <p>The critics' claim is a simple comparison: did the rate go up? The simplest honest response is a simple rate. If the Claude releases sit in the middle of the historical distribution, the burden shifts to the critics to explain why this particular middle is somehow worse than all the other middles that came before it.</p>
