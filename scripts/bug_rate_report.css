@@ -556,7 +556,7 @@ footer {
   font-size: 0.95rem;
 }
 
-/* ── Mean comparison bar ── */
+/* ── Mean comparison bar ──
 .mean-bar {
   display: flex;
   align-items: center;

@@ -20,7 +20,7 @@
             complicated, answers only one question: are the Claude-assisted releases unusually buggy?</p>
         <div class="hero-meta">
             Repository: <a href="https://github.com/RsyncProject/rsync">RsyncProject/rsync</a><br>
-            Method: bugs per 10 commits, permutation test
+            Method: bugs per 10 commits, exact permutation test
         </div>
     </header>
 
@@ -187,8 +187,8 @@
                 $last_release_tag</li>
             <li><strong>$n_claude_releases releases have Claude commits:</strong> $claude_summary_line</li>
             <li><strong>Both fall inside the middle 50%</strong> of the historical distribution</li>
-            <li><strong>$p_value_str of random pairs</strong> of any $n_claude_releases releases score equal or worse
-                than the Claude releases</li>
+            <li><strong>Exact permutation test p-value = $p_value_str:</strong> if you pick any
+                $n_claude_releases releases at random, you'd score as bad or worse $p_value_str of the time</li>
             <li><strong>The historical mean is $hist_claude_ratio_str the Claude mean</strong> ($hist_mean_str vs
                 $claude_mean_str bugs/10c)</li>
             <li><strong>No regime shift detected:</strong> runs test p=$p_runs_str, sequence is consistent with
@@ -222,7 +222,7 @@
             and its own tag. Pre-release tags ("pre", "rc") are skipped as boundaries and absorbed into their final
             release. Every commit belongs to exactly one release.</p>
 
-        <h3>How bugs are found and attributed</h3>
+        <h3>How bugs are found and assigned to releases</h3>
 
         <p>Bug counts come from three sources:</p>
 
@@ -231,13 +231,39 @@
             <li>the rsync Bugzilla instance (collected via the API),</li>
             <li>and the rsync mailing list.</li>
         </ol>
+        <br />
 
         <p>GitHub issues and mailing-list bugs are attributed to the most recent
             release that shipped before the bug was reported. For Bugzilla, each entry has a "Version" field that
             explicitly states which release the bug was reported against, and bugs
             are attributed to that release.</p>
 
-        <h3>Why this metric</h3>
+        <h3>Why the release is the unit of analysis</h3>
+
+        <p>Why group commits by release, bugs by release, and then ascertain the correlation &mdash; or lack
+            thereof &mdash; between Claude commits and bugs through the intermediary of releases? This is for two
+            reasons.</p>
+
+        <p>First, because the claim that the critics are making is also, itself, made in terms of releases: that
+            having any Claude commits in a release makes the whole release more buggy as a whole in a noticeable way,
+            not just that Claude-authored commits may introduce more bugs; the latter is a different metric, because
+            <em>later Claude- or human-authored commits could correct for those bugs within the same release</em>, and
+            nobody would then notice as part of the release, and overall it wouldn't matter to users; additionally,
+            it's simply important, as stated elsewhere, to meet the claim of the critics where it's at. If this forces
+            them to make their claims more nuanced &mdash; or otherwise move the goalposts &mdash; then
+            <em>mission accomplished</em>.
+        </p>
+
+        <p>Second, it's a problem of attribution: the vast, vast majority of bugs do not state exactly which commit
+            caused them, because doing so would require extensive research and analysis that is often not worth it in
+            favor of simply fixing-forward, and even if that analysis <em>was</em> done &mdash; via something like
+            <code>git bisect</code> &mdash; it wouldn't necessarily result in anything useful, or anything at all.
+            Many bugs can result from a combination of multiple commits, often separated significantly over time,
+            where it's unclear whether one commit or the other really introduced the bug. Or, one commit can reveal
+            several latent bugs introduced by other commits at once, and so on.
+        </p>
+
+        <h3>Why bugs and commits?</h3>
 
         <p>The critics' claim is simplistic, absolute, and universalistic: the rate of bugs in the Claude-exposed
             releases went up. Therefore, the simplest honest response is to analyize precisely what is being claimed:
@@ -249,7 +275,7 @@
             for the anti-AI crowd, and then we can do further analysis based on that. And the ball's in the anti-AI
             court for that game.</p>
 
-        <h3>What this metric does not do</h3>
+        <h3>What this approach does not do</h3>
 
         <p>I'm aware that this metric does not control for commit complexity, security intensity, or bug severity. It
             does not distinguish
@@ -278,23 +304,84 @@
 
         <p>If that doesn't look like a red flag to you, you'd be right.</p>
 
-        <h3>How Normal Are the Claude Releases?</h3>
+        <h3>Exact Permutation Test</h3>
+
+        <p>So the question is: are the Claude releases unusually buggy, or could you easily pull a group just as bad
+            out of the historical distribution by dumb luck? The way you answer that question statistically is an
+            <a href="https://en.wikipedia.org/wiki/Permutation_test"><strong>exact permutation test</strong></a>, which
+            just enumerates all pairs of two releases and asks: what fraction have a
+            mean bug rate as bad or worse than the one we actually observed? That fraction is the p-value of the
+            hypothesis under test.
+        </p>
 
         <div class="result-callout">
             <div class="result-number">$p_value_str</div>
-            <div class="result-label">of random pairs match or exceed the Claude mean</div>
+            <div class="result-label">exact permutation test p-value (one-sided, H&#8321;: Claude mean > historical)
+            </div>
             <div class="result-detail">
-                $n_extreme of $n_total possible pairs of 2 historical releases have mean bugs/10c
-                ≥ $claude_mean_str. Nearly half. The Claude releases land well within the range of where most pairs land:
-                the middle of the distribution.
+                $n_extreme of $n_total possible groups of $n_claude_releases historical releases have mean
+                bugs/10c ≥ $claude_mean_str. Nearly half. The Claude releases sit right in the middle of the
+                permutation distribution — there is nothing extreme about them.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
-                    Claude mean: $claude_mean_str · Historical mean: $hist_mean_str
+                    Test statistic: mean bugs/10c per group · Claude group mean: $claude_mean_str · Historical mean:
+                    $hist_mean_str
                 </span>
             </div>
         </div>
 
-        <p>In other words: nothing unusual here.</p>
+        <p>What this p-value tells us is that the hypothesis that Claude makes releases worse has, at least so far,
+            about as much predictive power as a coin flip: if you closed your eyes and picked $n_claude_releases
+            releases at random, you'd do as bad or
+            worse
+            nearly half the time. There's nothing unusual about the Claude group.</p>
+
+        <h3>Fisher's Exact Test</h3>
+
+        <p>The permutation test asks: how likely is it that a random group of releases scores as badly as the
+            Claude group? But there's another way to pose the question:
+            are Claude releases more likely than non-Claude releases to fall above the historical
+            median? That's a textbook 2&times;2 contingency table, and the standard test for it is
+            <a href="https://en.wikipedia.org/wiki/Fisher%27s_exact_test">Fisher's exact test</a>.
+        </p>
+
+        <table class="fisher-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>&le; median</th>
+                    <th>&gt; median</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Non-Claude</td>
+                    <td>$fisher_a</td>
+                    <td>$fisher_b</td>
+                </tr>
+                <tr>
+                    <td>Claude</td>
+                    <td>$fisher_c</td>
+                    <td>$fisher_d</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="result-callout">
+            <div class="result-number">$fisher_p_str</div>
+            <div class="result-label">one-sided p-value (H&#8321;: Claude more likely above median)</div>
+            <div class="result-detail">
+                Fisher's exact test asks: if we split all releases at the historical median
+                ($fisher_median_str bugs/10c), are Claude releases significantly more likely to
+                land above it? With a p-value of $fisher_p_str, the answer is a decisive no.
+                The odds ratio is $fisher_oddsratio_str &mdash; essentially 1:1. Claude releases are
+                no more likely to be above the median than any other releases.
+                <br><br>
+                <span style="font-family:var(--mono);font-size:0.85rem">
+                    Odds ratio: $fisher_oddsratio_str &middot; Median: $fisher_median_str bugs/10c
+                </span>
+            </div>
+        </div>
 
         <h3>The Distribution</h3>
 
@@ -321,15 +408,19 @@
                 Outside IQR
             </span>
         </div>
-        <p class="iqr-explain">
+        <br />
+        <p>
             <b>How to read this graph:</b> Each dot is a release. The <strong>shaded green band</strong> is the
-            interquartile range (IQR) —
+            <a href="https://en.wikipedia.org/wiki/Interquartile_range">interquartile range</a> —
             the middle 50% of historical releases, from <strong>$q25_str</strong> to <strong>$q75_str</strong> bugs/10c.
-            Half of all historical releases fall inside this band, and half fall outside, by definition.
             The darker regions on either side are the lower and upper quarters.
-            The Claude releases (green dots) <strong>$claude_in_iqr the IQR</strong> —
-            their bug rates are indistinguishable from the typical historical range. Check the numbers if you don't
-            believe the graph.
+        </p>
+
+        <p>
+            This is another way of saying the same thing the previous two tests said, but more
+            intuitively: that the Claude releases (green dots) <strong>$claude_in_iqr the IQR</strong> —
+            their bug rates fall within the typical historical range. (Check the numbers if you don't
+            believe the graph.)
         </p>
 
         <h3>Regime Check</h3>
@@ -340,18 +431,52 @@
             regime. Luckily, there's a way to test this statistically.</p>
 
         <p>Yes, the historical mean ($hist_mean_str bugs/10c) was driven by a bimodal distribution: v2.x releases
-            average $v2_mean_str bugs/10c; v3.x releases average $v3_mean_str. However, even within the v3.x regime, the
-            Claude releases are
-            unremarkable: $claude_v3_ranks_str, and in fact, the v3.x regime has a much <i>higher</i> mean bugs/10c,
-            which is the exact <i>opposite</i> of the kind of difference that would hurt the case of this paper and make
-            Claude-exposed releases more likely to be outliers.</p>
+            average $v2_mean_str bugs/10c; v3.x releases average $v3_mean_str. But even within the v3.x regime,
+            the Claude releases sit in the middle of the pack or better:</p>
 
-        <p>We can further test whether there are meaningfully different regimes in the version history we have, and
-            thus whether using the full historical data is valid, by doing a runs test. If such regimes existed, the runs test would likely detect non-random clustering — it doesn't. A runs test on the $nc_count
-            non-Claude releases finds $runs runs (expected $exp_runs_str under randomness,
-            z=$z_runs_str, <strong>p=$p_runs_str</strong>). There is no evidence of temporal clustering, in other words.
-            The sequence
-            is consistent with a random draw from the same distribution.</p>
+        <div class="strip">
+            $claude_v3_ranks
+        </div>
+        <div class="axis">
+            <span>0.01</span><span>0.1</span><span>1</span><span>10</span><span>100</span>
+        </div>
+        <div class="legend">
+            <span><i style="background:#b44a1e;opacity:.5"></i> v3.x historical</span>
+            <span><i style="background:#2d6a4f"></i> Claude</span>
+            <span style="display:inline-flex;align-items:center;gap:4px">
+                <span
+                    style="display:inline-block;width:24px;height:12px;background:rgba(45,106,79,.1);border-left:3px solid #2d6a4f;border-right:3px solid #2d6a4f;vertical-align:middle"></span>
+                Middle 50% (IQR)
+            </span>
+        </div>
+
+        <br>
+
+        <p>So the regime-shift argument doesn't just fail — it fails <em>backwards</em>. The v3.x era has a
+            much <i>higher</i> mean bugs/10c than v2.x. If you restrict the comparison to v3.x only, Claude releases
+            don't stand out at all — and one of them is <em>better</em> than most. The only way to make Claude look
+            like an outlier is to compare it against a <i>quieter</i> era and then blame the shift on Claude, when
+            the data says the shift predates Claude entirely.</p>
+
+        <p>We can further test whether there are meaningfully different regimes in the version history, and thus
+            whether using the full historical data is valid, by doing a
+            <a href="https://en.wikipedia.org/wiki/Wald%E2%80%93Wolfowitz_runs_test">runs test</a>.
+            If such regimes existed, the runs test would detect non-random clustering — it doesn't:</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=$p_runs_str</div>
+            <div class="result-label">Wald–Wolfowitz runs test on $nc_count non-Claude releases</div>
+            <div class="result-detail">
+                $runs runs observed (expected $exp_runs_str under randomness, z=$z_runs_str).
+                There is no evidence of temporal clustering — the sequence is consistent with a
+                random draw from the same distribution throughout. Using the full historical baseline
+                is valid.
+                <br><br>
+                <span style="font-family:var(--mono);font-size:0.85rem">
+                    Observed runs: $runs · Expected: $exp_runs_str · z=$z_runs_str
+                </span>
+            </div>
+        </div>
 
         <h3>The Pre-Claude Outlier</h3>
 
@@ -414,7 +539,8 @@
                     <div class="score-claim">"The Claude releases are statistically indistinguishable from historical
                         releases"</div>
                     <div class="score-evidence">Both releases fall inside the middle 50% of the historical distribution.
-                        The permutation test shows <strong>$p_value_str</strong> of random pairs score equal or worse.
+                        The exact permutation test yields a p-value of <strong>$p_value_str</strong> — pick any
+                        $n_claude_releases releases at random and you'd do as bad or worse nearly half the time.
                         There is no signal of abnormality.</div>
                 </div>
             </div>
@@ -436,8 +562,10 @@
                     <div class="score-claim">"Claude may not have affected the bug rate"</div>
                     <div class="score-evidence">The Claude mean ($claude_mean_str) is $hist_claude_ratio_desc_str the
                         historical mean ($hist_mean_str). But with only $n_claude_releases releases, this difference is
-                        not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude or the
-                            direction of any real effect. It can only tell us that there is no evidence of harm.</strong></div>
+                        not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude or
+                            the
+                            direction of any real effect. It can only tell us that there is no evidence of
+                            harm.</strong></div>
                 </div>
             </div>
 

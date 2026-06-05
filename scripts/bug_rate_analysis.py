@@ -18,6 +18,7 @@ from string import Template
 
 import duckdb
 import numpy as np
+from scipy.stats import fisher_exact
 
 DB_PATH = Path(__file__).resolve().parent / "rsync_github.duckdb"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "docs"
@@ -90,6 +91,15 @@ def generate_report(releases: list[dict]) -> str:
     )
     n_total = len(list(combinations(range(n_hist), k_bug)))
     p_value = n_extreme / n_total
+
+    # Fisher's exact test: 2×2 table of Claude/non-Claude × above/below historical median
+    fisher_median = np.median(hist_rates)
+    fisher_a = sum(1 for r in with_data if r["bugs_10c"] <= fisher_median and not r["is_claude"])
+    fisher_b = sum(1 for r in with_data if r["bugs_10c"] > fisher_median and not r["is_claude"])
+    fisher_c = sum(1 for r in with_data if r["bugs_10c"] <= fisher_median and r["is_claude"])
+    fisher_d = sum(1 for r in with_data if r["bugs_10c"] > fisher_median and r["is_claude"])
+    fisher_table = np.array([[fisher_a, fisher_b], [fisher_c, fisher_d]])
+    fisher_oddsratio, fisher_p = fisher_exact(fisher_table, alternative='greater')
 
     claude_ranks = []
     for r in claude:
@@ -202,23 +212,46 @@ def generate_report(releases: list[dict]) -> str:
     claude_worst_pctile = int(round(claude_worst_rank / len(hist_rates) * 100))
     n_higher_than_worst = sum(1 for h in hist_rates if h > claude_worst["bugs_10c"])
 
-    # ── v3.x ranking of Claude releases ──
+    # ── v3.x strip chart ──
     v3_with_data = sorted(
         [r for r in with_data if r["tag"].startswith("v3.")],
-        key=lambda x: x["bugs_10c"],
+        key=lambda x: x["tag"],
     )
-    parts = []
-    for i, cr in enumerate(sorted(claude, key=lambda x: x["tag"])):
-        v3_rank = sum(1 for r in v3_with_data if r["bugs_10c"] <= cr["bugs_10c"])
-        if i == len(claude) - 1 and len(claude) > 1:
-            prev_rank_str = parts[-1].split("ranks ")[1].split(" of ")[0]
-            if ordinal(v3_rank) == prev_rank_str:
-                parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} as well")
-            else:
-                parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} of {len(v3_with_data)} v3.x releases")
-        else:
-            parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} of {len(v3_with_data)} v3.x releases")
-    claude_v3_ranks_str = ", ".join(parts) if parts else ""
+    n_v3 = len(v3_with_data)
+    v3_rates = sorted(r["bugs_10c"] for r in v3_with_data if not r["is_claude"])
+    v3_q25 = np.percentile(v3_rates, 25)
+    v3_q75 = np.percentile(v3_rates, 75)
+    v3_median = np.median(v3_rates)
+    v3_q25_left = log_pct(v3_q25)
+    v3_q75_left = log_pct(v3_q75)
+
+    v3_strip_parts = [
+        f'<div class="outside" style="right:{100 - v3_q25_left:.1f}%"></div>',
+        f'<div class="outside" style="left:{v3_q75_left:.1f}%"></div>',
+        f'<div class="iqr" style="left:{v3_q25_left:.1f}%;width:{v3_q75_left - v3_q25_left:.1f}%"></div>',
+        f'<div class="iqr-center" style="left:{(v3_q25_left + v3_q75_left) / 2:.1f}%">middle 50%</div>',
+        f'<div class="med" style="left:{log_pct(v3_median):.1f}%"></div>',
+    ]
+    for r in v3_with_data:
+        is_c = r["is_claude"]
+        color = "#2d6a4f" if is_c else "#b44a1e"
+        size = 18 if is_c else 11
+        left = log_pct(r["bugs_10c"])
+        dot_class = "dot claude-dot" if is_c else "dot"
+        v3_strip_parts.append(
+            f'<div class="{dot_class}" '
+            f'style="left:{left:.1f}%;background:{color};width:{size}px;height:{size}px" '
+            f'title="{r["tag"]}: {r["bugs_10c"]:.2f} bugs/10c"></div>'
+        )
+        if is_c:
+            in_v3_iqr = v3_q25 <= r["bugs_10c"] <= v3_q75
+            badge_html = '<span class="badge">inside middle 50% ✓</span>' if in_v3_iqr else ''
+            v3_strip_parts.append(
+                f'<div class="dot-tag" style="left:{left:.1f}%">'
+                f'{r["tag"]}'
+                f'{badge_html}</div>'
+            )
+    v3_strip_items = "\n  ".join(v3_strip_parts)
 
     # ── Releases with bug data ──
     releases_with_bugs = [r for r in releases if r["bugs"] > 0]
@@ -268,6 +301,13 @@ def generate_report(releases: list[dict]) -> str:
         z_runs_str=f"{z_runs:.2f}",
         p_runs_str=f"{p_runs:.3f}",
         table_rows=table_rows,
+        fisher_p_str=f"{fisher_p:.0%}",
+        fisher_oddsratio_str=f"{fisher_oddsratio:.2f}",
+        fisher_a=fisher_a,
+        fisher_b=fisher_b,
+        fisher_c=fisher_c,
+        fisher_d=fisher_d,
+        fisher_median_str=f"{fisher_median:.2f}",
         # New dynamic template variables
         n_releases_with_bugs=len(releases_with_bugs),
         first_release_tag=first_release_tag,
@@ -286,7 +326,8 @@ def generate_report(releases: list[dict]) -> str:
         claude_worst_pctile=claude_worst_pctile,
         claude_worst_pctile_str=ordinal(claude_worst_pctile),
         n_higher_than_worst_claude=n_higher_than_worst,
-        claude_v3_ranks_str=claude_v3_ranks_str,
+        claude_v3_ranks=v3_strip_items,
+        n_v3=n_v3,
     )
 
     return html
