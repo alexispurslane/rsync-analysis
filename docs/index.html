@@ -180,17 +180,17 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
   <span class="vs">(0.5×)</span>
 </div>
 
-<h2>Is This Chance?</h2>
+<h2>How Normal Are the Claude Releases?</h2>
 <div class="sig">
-  <div class="p">p = 0.46</div>
+  <div class="p">top 46%</div>
   <div class="explain">
-    <strong>Permutation test on Bugs/10c:</strong> if we randomly pick 2 releases out of 37,
-    what's the probability their mean Bugs/10c is at least as high as what we see for the Claude releases?
-    <strong>305</strong> out of <strong>666</strong> possible pairs meet that bar — not rare at all.
+    If you pick any 2 releases at random, there's a <strong>46%</strong> chance
+    they'll have a mean Bugs/10c at least as high as the two Claude releases.
+    Nearly half of all possible pairs score the same or worse — the Claude releases blend right into the middle of the historical distribution.
   </div>
   <div class="detail">
-    Claude mean Bugs/10c: 3.78 · Historical mean: 7.60 · Claude is lower<br/>
-    v3.4.2: 0.80 Bugs/10c — rank 11/35 in historical distribution<br/>v3.4.3: 6.76 Bugs/10c — rank 26/35 in historical distribution
+    305 of 666 possible pairs have mean ≥ Claude's 3.78 · Historical mean: 7.60<br/>
+    v3.4.2: 0.80 Bugs/10c — rank 11/35 historically<br/>v3.4.3: 6.76 Bugs/10c — rank 26/35 historically
   </div>
 </div>
 

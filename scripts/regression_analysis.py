@@ -275,17 +275,17 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   <span class="vs">({'{:.1f}×'.format(claude_mean / hist_mean) if hist_mean > 0 else 'N/A'})</span>
 </div>
 
-<h2>Is This Chance?</h2>
+<h2>How Normal Are the Claude Releases?</h2>
 <div class="sig">
-  <div class="p">p = {p_value:.2f}</div>
+  <div class="p">top {p_value * 100:.0f}%</div>
   <div class="explain">
-    <strong>Permutation test on Bugs/10c:</strong> if we randomly pick {k_bug} releases out of {n_bug},
-    what's the probability their mean Bugs/10c is at least as high as what we see for the Claude releases?
-    <strong>{n_extreme}</strong> out of <strong>{n_total}</strong> possible pairs meet that bar — not rare at all.
+    If you pick any 2 releases at random, there's a <strong>{p_value:.0%}</strong> chance
+    they'll have a mean Bugs/10c at least as high as the two Claude releases.
+    Nearly half of all possible pairs score the same or worse — the Claude releases blend right into the middle of the historical distribution.
   </div>
   <div class="detail">
-    Claude mean Bugs/10c: {claude_mean:.2f} · Historical mean: {hist_mean:.2f} · Claude is {'lower' if claude_mean < hist_mean else 'higher'}<br/>
-    {'<br/>'.join(f'{tag}: {rate:.2f} Bugs/10c — rank {rank}/{out_of} in historical distribution' for tag, rate, rank, out_of in claude_ranks)}
+    {n_extreme} of {n_total} possible pairs have mean ≥ Claude's {claude_mean:.2f} · Historical mean: {hist_mean:.2f}<br/>
+    {'<br/>'.join(f'{tag}: {rate:.2f} Bugs/10c — rank {rank}/{out_of} historically' for tag, rate, rank, out_of in claude_ranks)}
   </div>
 </div>
 
