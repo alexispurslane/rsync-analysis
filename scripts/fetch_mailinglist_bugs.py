@@ -2,7 +2,7 @@
 """
 Extract bug reports from rsync mailing list archives.
 
-Unlike the old fetch_mailinglist_data.py which only looked for regression
+Unlike a regression-only approach which only looks for
 signals ("broke after upgrading"), this extracts ALL posts that look like
 bug reports — any post mentioning a version number AND a bug signal word.
 

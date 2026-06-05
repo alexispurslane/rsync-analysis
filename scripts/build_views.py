@@ -14,7 +14,7 @@ Bug counting rules:
   - Bugzilla: all bugs with version field match, excluding
     DUPLICATE/INVALID/WONTFIX/WORKSFORME (not real bugs)
   - GitHub:   all issues attributed to the release by filing date
-  - ML:       all reports (already strict-filtered by fetch_mailinglist_data.py)
+  - ML:       all bug reports (strict-filtered by fetch_mailinglist_bugs.py)
   - Sources are summed; overlap between GitHub and Bugzilla is small
     (v3.1.3, v3.2.0) and counts from both are included since they
     track different populations anyway

@@ -39,7 +39,7 @@ uv run python scripts/enrich_releases.py
 uv run python scripts/build_views.py
 
 # 6. Generate HTML report
-uv run python scripts/regression_analysis.py
+uv run python scripts/bug_rate_analysis.py
 ```
 
 Output: `docs/index.html`

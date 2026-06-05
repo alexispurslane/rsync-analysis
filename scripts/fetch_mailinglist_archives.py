@@ -3,7 +3,7 @@
 Download rsync mailing list archives from lists.samba.org.
 
 Saves gzipped monthly archives and their decompressed .txt versions
-to /tmp/rsync-ml/. The other pipeline scripts (fetch_mailinglist_data.py,
+to /tmp/rsync-ml/. The other pipeline scripts (fetch_mailinglist_bugs.py,
 fetch_mailinglist_bugs.py) look for this directory and skip remote
 fetching when it exists.
 

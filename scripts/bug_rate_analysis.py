@@ -183,7 +183,7 @@ def generate_report(releases: list[dict]) -> str:
         )
 
     # Load template
-    template_path = Path(__file__).resolve().parent / "regression_report.html"
+    template_path = Path(__file__).resolve().parent / "bug_rate_report.html"
     template = Template(template_path.read_text())
 
     # Compute template variables
@@ -301,8 +301,8 @@ def main() -> None:
     (OUTPUT_DIR / "index.html").write_text(html)
 
     # Copy CSS to output dir (same location as index.html for relative ref)
-    css_src = Path(__file__).resolve().parent / "regression_report.css"
-    css_dst = OUTPUT_DIR / "regression_report.css"
+    css_src = Path(__file__).resolve().parent / "bug_rate_report.css"
+    css_dst = OUTPUT_DIR / "bug_rate_report.css"
     css_dst.write_text(css_src.read_text())
 
     print(f"Written to {OUTPUT_DIR / 'index.html'}")
