@@ -120,10 +120,8 @@
                     it"</em>.</figcaption>
         </figure>
 
-        <p>The thread did not stop at words. As is <a
-                href="https://www.msn.com/en-us/news/technology/animator-jorge-gutierrez-got-death-threats-over-ai-then-he-quit/ar-AA24ph6X">typical
-                for anti-AI users</a>, it eventually escalated to
-            fantasies of violence. One user posted a now deleted comment including My Little Pony drawings of themselves
+        <p>The thread did not stop at words. It eventually escalated to, at one point, visual depictions of
+            fantasies of violence, when one user posted a now deleted comment including My Little Pony drawings of themselves
             strangling the
             "project janitor that pushed vibecoded commits":</p>
 
@@ -412,8 +410,7 @@
             <div class="result-label">one-sided p-value (H&#8321;: Claude more likely above median)</div>
             <div class="result-detail">
                 Fisher's exact test asks: if we split all releases at the historical median
-                (0.74 sev/10c), are Claude releases significantly more likely to
-                land above it? With a p-value of 74%, the answer is a decisive no.
+                (0.74 sev/10c), are these Claude releases significantly buggy than previous releases (more likely to land above the median)? With a p-value of 74%, the answer is a decisive no.
                 The odds ratio is 1.06 &mdash; essentially 1:1. Claude releases are
                 no more likely to be above the median than any other releases.
                 <br><br>
@@ -422,6 +419,8 @@
                 </span>
             </div>
         </div>
+
+        <p>To emphasize, this does not mean that all Claude releases in the future will not be more buggy. We don't have nearly enough data to build a model and extrapolate out like that, and that's not what a Fisher's exact test is for. The point that's being made here is that <i>these specific releases</i> are not at all notable; if no one had known they were AI, no one would have cared or noticed anything out of the ordinary, and there is no evidence with which to conclude that Claude made anything worse yet, unlike the objective, absolutist, universal claims made by critics.</p>
 
         <h3>The Distribution</h3>
 
@@ -764,25 +763,12 @@
                         historical releases scored higher. The correlation is noise.</div>
                 </div>
             </div>
-
-            <div class="score-row">
-                <div class="score-verdict weak">∓</div>
-                <div class="score-body">
-                    <div class="score-claim">"Claude may not have affected the bug rate"</div>
-                    <div class="score-evidence">The Claude mean (1.65) is half the
-                        historical mean (2.95). But with only 2 releases, this difference is
-                        not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude or
-                            the
-                            direction of any real effect. It can only tell us that there is no evidence of
-                            harm.</strong></div>
-                </div>
-            </div>
-
+            
             <div class="score-row">
                 <div class="score-verdict no">✗</div>
                 <div class="score-body">
-                    <div class="score-claim">"Claude clearly made things worse"</div>
-                    <div class="score-evidence">The Claude releases bracket the IQR — one below, one above. Neither is
+                    <div class="score-claim">"Claude clearly made things worse" &emdash; the main claim</div>
+                    <div class="score-evidence">The Claude releases bracket the IQR —  one below, one above. Neither is
                         an outlier.
                         There is no distributional evidence of harm. The claim rests entirely on a post-hoc correlation
                         observed by a social media user.</div>
@@ -792,8 +778,16 @@
             <div class="score-row">
                 <div class="score-verdict no">✗</div>
                 <div class="score-body">
+                    <div class="score-claim">"Claude commits (in general) do not and will not make things worse"</div>
+                    <div class="score-evidence">This is a common misrepresentation of my claims here. I am not trying to extrapolate out into the future, and say something like "in general, Claude won't make things worse" or "Claude will never make things worse." Instead, the point is this: there is no evidence of it having done so, and the two Claude releases we have currently are thoroughly unremarkable, so the outrage is totally unjustified.</div>
+                </div>
+            </div>
+
+            <div class="score-row">
+                <div class="score-verdict no">✗</div>
+                <div class="score-body">
                     <div class="score-claim">"The regressions speak for themselves"</div>
-                    <div class="score-evidence">v3.4.1 — a pre-Claude release — has the highest bug rate in the
+                    <div class="score-evidence">v3.4.1 —  a pre-Claude release —  has the highest bug rate in the
                         dataset (39.39 sev/10c). Nobody noticed, because there was no AI to be angry at.
                         The regressions only "speak" when you ignore the historical distribution.</div>
                 </div>
@@ -820,7 +814,8 @@
     <div class="closing">
         <div class="page">
             <h2>Discussion, and Tridge's Response</h2>
-            <p>So, why do people feel like they've been betrayed? A lot of it is just sheer, blind outrage at the use of
+            <p>So, why do people feel like they've been betrayed, and feel <i>so sure</i> that things have "clearly" gotten worse &emdash; that Claude "broke rsync" &emdash; when there is no evidence for this, and no data except two thoroughly unremarkable releases?</p>
+            <p>A lot of it is just sheer, blind outrage at the use of
                 LLMs. However, there are some confounders that might have caused people to feel that way:</p>
 
             <p>On the HN thread, user <code>zos_kia</code> <a
