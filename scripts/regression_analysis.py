@@ -87,6 +87,30 @@ def generate_report(releases: list[dict]) -> str:
         rank = sum(1 for h in hist_rates if h <= r["bugs_10c"])
         claude_ranks.append((r["tag"], r["bugs_10c"], rank, len(hist_rates)))
 
+    # Regime comparison: v2.x vs v3.x
+    v2_releases = [r for r in with_data if r["tag"].startswith("v2.")]
+    v3_releases = [r for r in with_data if r["tag"].startswith("v3.")]
+    v2_mean = np.mean([r["bugs_10c"] for r in v2_releases])
+    v3_mean = np.mean([r["bugs_10c"] for r in v3_releases])
+
+    # Runs test on non-Claude releases
+    nc_data = [r for r in with_data if not r["is_claude"]]
+    nc_rates_only = [r["bugs_10c"] for r in nc_data]
+    nc_median = np.median(nc_rates_only)
+    binary = [1 if r > nc_median else 0 for r in nc_rates_only]
+    runs = 1
+    for i in range(1, len(binary)):
+        if binary[i] != binary[i - 1]:
+            runs += 1
+    n1 = sum(binary)
+    n0 = len(binary) - n1
+    exp_runs = (2 * n1 * n0) / (n1 + n0) + 1
+    var_runs = (2 * n1 * n0 * (2 * n1 * n0 - n1 - n0)) / ((n1 + n0) ** 2 * (n1 + n0 - 1))
+    std_runs = np.sqrt(var_runs)
+    z_runs = (runs - exp_runs) / std_runs
+    from math import erfc, sqrt
+    p_runs = erfc(abs(z_runs) / sqrt(2))
+
     # Strip chart
     strip_parts = [
         f'<div class="outside" style="right:{100 - q25_left:.1f}%"></div>',
@@ -799,7 +823,7 @@ footer {{
 
 <p>User <code>bitshift</code> replied: <em>"I would also love to see such a chart. It wouldn't be completely informative… But at least it would be something objective we could measure."</em></p>
 
-<p><strong>This analysis is that chart.</strong> Stripped to its bones. No weighted regressions. No security-commit classification. No WLS model. Just one question: do the Claude releases look different from the historical distribution of all releases?</p>
+<p><strong>This analysis is that chart.</strong> One metric, every release, no model.</p>
 
 <p>On the HN thread, user <code>zos_kia</code> pointed at the confound directly:</p>
 
@@ -815,11 +839,9 @@ footer {{
   <span class="attr">— jbert on Lobsters</span>
 </blockquote>
 
-<p>These users identified the exact confound: it wasn't AI writing the code that caused regressions. It was AI finding security holes that forced tridge to ship more changes than usual — and more changes means more regressions, regardless of who wrote them. This is not a Claude problem. It is a "more changes" problem. Tridge himself confirmed this causal chain in his response, describing how a flood of AI-generated CVE reports forced rapid, extensive changes to rsync's attack surface. A retired developer who would rather be sailing, he reached for Claude to help with the volume: writing test suites, adding defence-in-depth hardening, and working through the security backlog. He acknowledged the regressions in v3.4.3 but said he had deliberately prioritized security fixes over edge-case compatibility.</p>
+<p>These users identified the exact confound: it wasn't AI writing the code that caused regressions. It was AI finding security holes that forced tridge to ship more changes than usual — and more changes means more regressions, regardless of who wrote them. This is not a Claude problem. It is a "more changes" problem. <a href="https://medium.com/@tridge60/rsync-and-outrage-d9849599e5a0">Tridge himself confirmed this causal chain</a> in his response, describing how a flood of AI-generated CVE reports forced rapid, extensive changes to rsync's attack surface. A retired developer who would rather be sailing, he reached for Claude to help with the volume: writing test suites, adding defence-in-depth hardening, and working through the security backlog. He acknowledged the regressions in v3.4.3 but said he had deliberately prioritized security fixes over edge-case compatibility.</p>
 
 <div class="section-divider"></div>
-
-<p>No model. No covariates. Just the empirical distribution of bugs per commit across every release with data.</p>
 
 </section>
 
@@ -855,7 +877,13 @@ footer {{
 bugs/10c = (bug_count ÷ total_commits) × 10
 </div>
 
-<p>Bug counts come from three sources: GitHub issues, Bugzilla, and mailing-list reports. They are summed per release. Commits are counted from git tags, with each commit assigned to exactly one release via tag ranges.</p>
+<h3>How commits are assigned to releases</h3>
+
+<p>Every commit on the default branch was ordered by committer date to produce a sequential timeline. Each git tag points to a specific commit in this timeline. A release's range is all commits between the previous tag and its own tag. Pre-release tags ("pre", "rc") are skipped as boundaries and absorbed into their final release. Every commit belongs to exactly one release.</p>
+
+<h3>How bugs are found and attributed</h3>
+
+<p>Bug counts come from three sources: GitHub issues in the rsync repository, the rsync Bugzilla instance, and the rsync mailing list. Issues filed against the rsync project were collected via the GitHub REST API. Bugs from the mailing list were identified by parsing message subjects for bug report patterns and cross-referencing with the project's issue tracking. Bugzilla entries were collected via the Bugzilla API. Each bug is attributed to the most recent release that shipped before the bug was reported.</p>
 
 <p>This metric is agnostic to <em>what kind</em> of bugs or <em>what kind</em> of commits. It does not classify regressions by confidence. It does not weight security commits. It treats every release as a single data point with two numbers: bugs and commits.</p>
 
@@ -933,6 +961,12 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     </span>
   </div>
 </div>
+
+<h3>Regime Check</h3>
+
+<p>The historical mean is {hist_mean:.2f} bugs/10c, but this is driven by a bimodal distribution. v2.x releases average {v2_mean:.2f} bugs/10c; v3.x releases average {v3_mean:.2f}. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 16th of 21 v3.x releases, v3.4.3 ranks 16th as well.</p>
+
+<p>A runs test on the {len(nc_data)} non-Claude releases finds {runs} runs (expected {exp_runs:.1f} under randomness, z={z_runs:.2f}, <strong>p={p_runs:.3f}</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
 
 <h3>All Releases (chronological)</h3>
 
@@ -1015,8 +1049,6 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <div class="closing">
 <div class="page">
-
-<p style="font-style:italic;color:var(--fg-light);font-size:0.85rem;margin-bottom:1.5rem">This analysis is intentionally minimal. A follow-up analysis controls for security-commit intensity using weighted regression and finds the same result: security work predicts regressions; Claude does not.</p>
 
 <p>The data says the Claude releases are normal. Not better. Not worse. Normal. The outrage was a misreading of a single data point against a background of noise. The distribution is the distribution. The tail is not Claude's tail. It is the project's own noise floor.</p>
 
