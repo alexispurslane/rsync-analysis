@@ -20,7 +20,7 @@
             complicated, answers only one question: are the Claude-assisted releases unusually buggy?</p>
         <div class="hero-meta">
             Repository: <a href="https://github.com/RsyncProject/rsync">RsyncProject/rsync</a><br>
-            Method: bugs per 10 commits, exact permutation test
+            Method: severity-weighted bugs per 10 commits, exact permutation test
         </div>
     </header>
 
@@ -227,7 +227,7 @@
 
         <h3>How bugs are found and assigned to releases</h3>
 
-        <p>Bug counts come from three sources:</p>
+        <p>Bug reports come from three sources:</p>
 
         <ol>
             <li>GitHub issues in the rsync repository (collated via the GitHub REST API),</li>
@@ -240,6 +240,42 @@
             release that shipped before the bug was reported. For Bugzilla, each entry has a "Version" field that
             explicitly states which release the bug was reported against, and bugs
             are attributed to that release.</p>
+
+        <h3>Severity scoring</h3>
+
+        <p>To control for bug severity — so that, as someone on HN said, a typo in a button and a CVE aren't rated
+            equally — every bug report was scored for severity on a
+            0–100 scale. The scorer is <a href="https://huggingface.co/Qwen/Qwen3-35B">Qwen&nbsp;3 35B</a>,
+            a small open-weight language model, prompted as a senior reliability engineer assessing real-world impact.
+            Each bug report was given to the model as its title and body text (truncated to 3,000 characters),
+            along with the following rubric:</p>
+
+        <table class="rubric-table">
+<thead><tr><th>Score</th><th>Category</th><th>Description</th></tr></thead>
+<tbody><tr><td class="rubric-range">90–100</td><td class="rubric-label">Data loss / corruption</td><td>Silent data corruption or data loss. The user's files or backups are wrong and they may not notice until it's too late. Security vulnerabilities that allow remote code execution or unauthorized access.</td></tr><tr><td class="rubric-range">70–89</td><td class="rubric-label">Crash / hang / broken backups</td><td>rsync crashes, hangs, or fails in a way that breaks automated backups or cron jobs. Data is not corrupted but backups are missed. High CPU or memory usage that makes rsync unusable in production. Build or compilation failures — if rsync cannot be built from source, users cannot install it at all. This is a blocking problem, not a minor inconvenience. Score these at least 70. Security vulnerabilities that expose sensitive data.</td></tr><tr><td class="rubric-range">50–69</td><td class="rubric-label">Feature regression</td><td>Feature regressed — something that used to work no longer works, but there's a workaround. Performance regressions large enough to disrupt production workflows. Incorrect output that is visible (errors, wrong filenames) but doesn't corrupt data.</td></tr><tr><td class="rubric-range">30–49</td><td class="rubric-label">Minor regression</td><td>Minor feature regression with easy workaround. Error messages are confusing but the operation still succeeds. Intermittent test failures. Portability issues on uncommon platforms.</td></tr><tr><td class="rubric-range">10–29</td><td class="rubric-label">Cosmetic / low impact</td><td>Cosmetic issues, documentation errors, minor UX annoyances. Test-only issues that don't affect users.</td></tr><tr><td class="rubric-range">0</td><td class="rubric-label">Feature request</td><td>If the issue is asking for a new feature, a change in default behavior, or a packaging suggestion — no matter how reasonable — it is NOT a bug. Score it 0.</td></tr><tr><td class="rubric-range">0–9</td><td class="rubric-label">Not a real bug</td><td>Spam, off-topic, duplicate. Issues that are clearly not about rsync or are empty/meaningless.</td></tr></tbody>
+</table>
+
+        <p>All three bug sources — GitHub issues, Bugzilla, and the rsync mailing list — were scored. Bugzilla and
+            mailing list reports had only a title (no body), so the model scored those from the title alone. The model
+            was instructed to fall back on the title and lean toward the middle of the range (40–60) when the body
+            didn't provide enough information. The model was also told to output only a severity integer via
+            <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/">structured output</a>
+            (JSON schema), so there were no free-text responses to parse. Scoring was done at temperature&nbsp;0
+            for determinism — the same input always produces the same score.
+        </p>
+
+        <p>Issues scored severity&nbsp;0 — feature requests, spam, off-topic rants about AI, empty submissions — are
+            excluded from bug counts by default. This matters because some releases attracted a lot of noise on
+            GitHub. v3.4.2 had four issues filed; the model scored all four at severity&nbsp;0 (a feature-request
+            option, a missing tarball question, and two more feature requests).
+        </p>
+
+        <p>Example scores from the database, one per tier:</p>
+
+        <table class="rubric-table scoring-examples">
+<thead><tr><th>Score</th><th>Release</th><th>Title</th></tr></thead>
+<tbody><tr><td class="rubric-range">95</td><td><a href="https://github.com/RsyncProject/rsync/issues/750">v3.4.1</a></td><td>Destination --chmod and --fake-super: chmod applied to fake-super, backup permissions lost</td></tr><tr><td class="rubric-range">75</td><td><a href="https://github.com/RsyncProject/rsync/issues/951">v3.4.3</a></td><td>error in rsync protocol data stream (code 12) at token.c(490) [sender=3.4.3]</td></tr><tr><td class="rubric-range">55</td><td><a href="https://github.com/RsyncProject/rsync/issues/880">v3.4.1</a></td><td>--dry-run doesn't work with --mkpath when copying files</td></tr><tr><td class="rubric-range">35</td><td><a href="https://github.com/RsyncProject/rsync/issues/846">v3.4.1</a></td><td>manpages not installed in out-of-tree builds</td></tr><tr><td class="rubric-range">15</td><td><a href="https://github.com/RsyncProject/rsync/issues/866">v3.4.1</a></td><td>Minor inconsistencies in options in manpage</td></tr><tr><td class="rubric-range">0</td><td><a href="https://github.com/RsyncProject/rsync/issues/968">v3.4.3</a></td><td>PAM Support - Open for Discussion</td></tr></tbody>
+</table>
 
         <h3>Why the release is the unit of analysis</h3>
 
@@ -272,7 +308,9 @@
             releases went up. Therefore, the simplest honest response is to analyize precisely what is being claimed:
             bugs, commits, releases, and Claude-exposed commits. If the Claude releases sit in the middle of the
             historical distribution, the burden shifts to the critics to explain why this particular middle is somehow
-            worse than all the other middles that came before it. Even if that results in is shifting the conversation
+            worse than all the other middles that came before it. Even by weighting by severity, I feel that I am giving extensive generosity to the anti-AI point in all this, but enough of the more intelligent critics brought it up that I found it worth it.</p>
+
+        <p>Even if that results in is shifting the conversation
             toward a more nuanced discussion of the <i>quality</i> and <i>type</i> and <i>user impact</i> of the bugs in
             the releases, it will already have been a major win for the pro-AI crowd, and a shifting of the goalposts
             for the anti-AI crowd, and then we can do further analysis based on that. And the ball's in the anti-AI
@@ -280,46 +318,10 @@
 
         <h3>What this approach does not do</h3>
 
-        <p>I'm aware that this metric does not control for commit complexity, security intensity, or bug severity. It
-            does not distinguish
-            between a one-line typo fix and a CVE patch. It is a blunt instrument. But the critics' accusation is also
+        <p>I'm aware that this metric does not control for commit complexity or security intensity. It is a blunt
+            instrument. But the critics' accusation is also
             blunt: "Claude is making things worse." A blunt instrument is what is required in response. Blood begets
             blood.</p>
-
-        <h3>Severity scoring</h3>
-
-        <p>To check whether the raw bug count tells the whole story, every bug report was scored for severity on a
-            0–100 scale. The scorer is <a href="https://huggingface.co/Qwen/Qwen3-35B">Qwen&nbsp;3 35B</a>,
-            a small open-weight language model, prompted as a senior reliability engineer assessing real-world impact.
-            Each bug report was given to the model as its title and body text (truncated to 3,000 characters),
-            along with the following rubric:</p>
-
-        <table class="rubric-table">
-<thead><tr><th>Score</th><th>Category</th><th>Description</th></tr></thead>
-<tbody><tr><td class="rubric-range">90–100</td><td class="rubric-label">Data loss / corruption</td><td>Silent data corruption or data loss. The user's files or backups are wrong and they may not notice until it's too late. Security vulnerabilities that allow remote code execution or unauthorized access.</td></tr><tr><td class="rubric-range">70–89</td><td class="rubric-label">Crash / hang / broken backups</td><td>rsync crashes, hangs, or fails in a way that breaks automated backups or cron jobs. Data is not corrupted but backups are missed. High CPU or memory usage that makes rsync unusable in production. Build or compilation failures — if rsync cannot be built from source, users cannot install it at all. This is a blocking problem, not a minor inconvenience. Score these at least 70. Security vulnerabilities that expose sensitive data.</td></tr><tr><td class="rubric-range">50–69</td><td class="rubric-label">Feature regression</td><td>Feature regressed — something that used to work no longer works, but there's a workaround. Performance regressions large enough to disrupt production workflows. Incorrect output that is visible (errors, wrong filenames) but doesn't corrupt data.</td></tr><tr><td class="rubric-range">30–49</td><td class="rubric-label">Minor regression</td><td>Minor feature regression with easy workaround. Error messages are confusing but the operation still succeeds. Intermittent test failures. Portability issues on uncommon platforms.</td></tr><tr><td class="rubric-range">10–29</td><td class="rubric-label">Cosmetic / low impact</td><td>Cosmetic issues, documentation errors, minor UX annoyances. Test-only issues that don't affect users.</td></tr><tr><td class="rubric-range">0</td><td class="rubric-label">Feature request</td><td>If the issue is asking for a new feature, a change in default behavior, or a packaging suggestion — no matter how reasonable — it is NOT a bug. Score it 0.</td></tr><tr><td class="rubric-range">0–9</td><td class="rubric-label">Not a real bug</td><td>Spam, off-topic, duplicate. Issues that are clearly not about rsync or are empty/meaningless.</td></tr></tbody>
-</table>
-
-        <p>All three bug sources — GitHub issues, Bugzilla, and the rsync mailing list — were scored. Bugzilla and
-            mailing list reports had only a title (no body), so the model scored those from the title alone. The model
-            was instructed to fall back on the title and lean toward the middle of the range (40–60) when the body
-            didn't provide enough information. The model was also told to output only a severity integer via
-            <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/">structured output</a>
-            (JSON schema), so there were no free-text responses to parse. Scoring was done at temperature&nbsp;0
-            for determinism — the same input always produces the same score.
-        </p>
-
-        <p>Issues scored severity&nbsp;0 — feature requests, spam, off-topic rants about AI, empty submissions — are
-            excluded from bug counts by default. This matters because some releases attracted a lot of noise on
-            GitHub. v3.4.2 had four issues filed; the model scored all four at severity&nbsp;0 (a feature-request
-            option, a missing tarball question, and two more feature requests).
-        </p>
-
-        <p>Example scores from the database, one per tier:</p>
-
-        <table class="rubric-table scoring-examples">
-<thead><tr><th>Score</th><th>Release</th><th>Title</th></tr></thead>
-<tbody><tr><td class="rubric-range">95</td><td><a href="https://github.com/RsyncProject/rsync/issues/750">v3.4.1</a></td><td>Destination --chmod and --fake-super: chmod applied to fake-super, backup permissions lost</td></tr><tr><td class="rubric-range">75</td><td><a href="https://github.com/RsyncProject/rsync/issues/951">v3.4.3</a></td><td>error in rsync protocol data stream (code 12) at token.c(490) [sender=3.4.3]</td></tr><tr><td class="rubric-range">55</td><td><a href="https://github.com/RsyncProject/rsync/issues/880">v3.4.1</a></td><td>--dry-run doesn't work with --mkpath when copying files</td></tr><tr><td class="rubric-range">35</td><td><a href="https://github.com/RsyncProject/rsync/issues/846">v3.4.1</a></td><td>manpages not installed in out-of-tree builds</td></tr><tr><td class="rubric-range">15</td><td><a href="https://github.com/RsyncProject/rsync/issues/866">v3.4.1</a></td><td>Minor inconsistencies in options in manpage</td></tr><tr><td class="rubric-range">0</td><td><a href="https://github.com/RsyncProject/rsync/issues/968">v3.4.3</a></td><td>PAM Support - Open for Discussion</td></tr></tbody>
-</table>
 
     </section>
 
@@ -505,6 +507,60 @@
             no evidence Claude usage bends releases in either direction.
         </p>
 
+        <h3>Commit Rate</h3>
+
+        <p>One possible objection I've seen is that while perhaps the defect rate of Claude-authored commits is not
+            worse than human-authored ones, Claude sped up developmend so much — due to "vibe coding" perhaps — that the
+            total number of bugs in each release got too high for comfort anyway, in which case it doesn't matter that
+            the defect rate per commit isn't so bad, because that's not what downstream users experience. We can check
+            this, though:</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=88%</div>
+            <div class="result-label">exact permutation test: do Claude releases have more commits?</div>
+            <div class="result-detail">
+                Claude releases averaged 42 commits; non-Claude releases averaged
+                185. If you pick any 2 releases at random, you'd see as many
+                or more commits 88% of the time.
+            </div>
+        </div>
+
+        <p>So it seems that Claude releases did not have meaningfully
+            more commits. If anything, they had <i>a lot fewer</i>, but of course, the data is underpowered to say that
+            for sure; just like the rest of this article, I'm only trying to show a startling <i>lack</i> of evidence
+            for the supposed massive harms of using Claude, not trying to prove there must have been none, or that it
+            was even "beneficial" in terms of focused releases.</p>
+
+        <p>But commit count is a blunt measure. A commit can be a one-line typo fix or a rewrite of the entire
+            protocol handler. What about lines of code changed? GitHub's compare API gives us additions and deletions
+            between each pair of consecutive tags:</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=5%</div>
+            <div class="result-label">exact permutation test: do Claude releases have more lines changed?</div>
+            <div class="result-detail">
+                Claude releases averaged 3756 lines changed; non-Claude releases averaged
+                696. If you pick any 2 releases at random, you'd see as many
+                or more lines changed only 5% of the time. Claude releases <em>were</em> larger
+                by this measure.
+            </div>
+        </div>
+
+        <p>Lines changed went up by a lot. But did absolute bug numbers?</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=77%</div>
+            <div class="result-label">exact permutation test: do Claude releases have more severity-weighted bugs?</div>
+            <div class="result-detail">
+                Claude releases averaged 5.6 severity-weighted bugs; non-Claude releases averaged
+                14.9. If you pick any 2 releases at random, you'd see as many
+                or more severity-weighted bugs 77% of the time. More lines changed, but not more bugs.
+            </div>
+        </div>
+
+        <p>So: the Claude releases changed way more lines of code than historical ones, but didn't have more bugs.
+            More code, same bugs. That's not what you'd expect if Claude were making things worse.</p>
+
         <h3>Regime Check</h3>
 
         <p>The obvious counterargument is that maybe <i>earlier</i> rsync releases were less in maintenence-mode, and so
@@ -621,6 +677,7 @@
                     <tr>
                         <th>Release</th>
                         <th>Bugs</th>
+                        <th>Sev</th>
                         <th>Commits</th>
                         <th>Claude</th>
                         <th>Bugs/10c</th>
@@ -629,43 +686,43 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class=""><td class="rel">v2.4.6</td><td class="n">2</td><td class="n">13</td><td class="n">0</td><td class="n rate">1.54</td><td class="n rate">0.92</td><td class="era">54th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.0</td><td class="n">4</td><td class="n">73</td><td class="n">0</td><td class="n rate">0.55</td><td class="n rate">0.18</td><td class="era">11th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.1</td><td class="n">4</td><td class="n">69</td><td class="n">0</td><td class="n rate">0.58</td><td class="n rate">0.26</td><td class="era">20th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.2</td><td class="n">6</td><td class="n">117</td><td class="n">0</td><td class="n rate">0.51</td><td class="n rate">0.25</td><td class="era">14th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.4</td><td class="n">5</td><td class="n">21</td><td class="n">0</td><td class="n rate">2.38</td><td class="n rate">1.64</td><td class="era">69th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.5</td><td class="n">22</td><td class="n">88</td><td class="n">0</td><td class="n rate">2.50</td><td class="n rate">1.32</td><td class="era">63rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.6</td><td class="n">14</td><td class="n">239</td><td class="n">0</td><td class="n rate">0.59</td><td class="n rate">0.28</td><td class="era">23rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.0</td><td class="n">8</td><td class="n">267</td><td class="n">0</td><td class="n rate">0.30</td><td class="n rate">0.18</td><td class="era">9th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.1</td><td class="n">5</td><td class="n">444</td><td class="n">0</td><td class="n rate">0.11</td><td class="n rate">0.08</td><td class="era">0th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.2</td><td class="n">29</td><td class="n">17</td><td class="n">0</td><td class="n rate">17.06</td><td class="n rate">9.88</td><td class="era">94th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.3</td><td class="n">49</td><td class="n">381</td><td class="n">0</td><td class="n rate">1.29</td><td class="n rate">0.59</td><td class="era">34th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.4</td><td class="n">22</td><td class="n">760</td><td class="n">0</td><td class="n rate">0.29</td><td class="n rate">0.12</td><td class="era">6th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.5</td><td class="n">16</td><td class="n">146</td><td class="n">0</td><td class="n rate">1.10</td><td class="n rate">0.49</td><td class="era">31st percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.7</td><td class="n">15</td><td class="n">649</td><td class="n">0</td><td class="n rate">0.23</td><td class="n rate">0.09</td><td class="era">3rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.8</td><td class="n">12</td><td class="n">72</td><td class="n">0</td><td class="n rate">1.67</td><td class="n rate">0.74</td><td class="era">49th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.9</td><td class="n">53</td><td class="n">261</td><td class="n">0</td><td class="n rate">2.03</td><td class="n rate">0.72</td><td class="era">43rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.0</td><td class="n">64</td><td class="n">909</td><td class="n">0</td><td class="n rate">0.70</td><td class="n rate">0.31</td><td class="era">26th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.1</td><td class="n">6</td><td class="n">102</td><td class="n">0</td><td class="n rate">0.59</td><td class="n rate">0.40</td><td class="era">29th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.2</td><td class="n">10</td><td class="n">9</td><td class="n">0</td><td class="n rate">11.11</td><td class="n rate">4.56</td><td class="era">80th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.3</td><td class="n">22</td><td class="n">55</td><td class="n">0</td><td class="n rate">4.00</td><td class="n rate">1.96</td><td class="era">71st percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.0</td><td class="n">170</td><td class="n">571</td><td class="n">0</td><td class="n rate">2.98</td><td class="n rate">0.92</td><td class="era">51st percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.1</td><td class="n">68</td><td class="n">66</td><td class="n">0</td><td class="n rate">10.30</td><td class="n rate">4.86</td><td class="era">83rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.2</td><td class="n">55</td><td class="n">57</td><td class="n">0</td><td class="n rate">9.65</td><td class="n rate">3.22</td><td class="era">74th percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.3</td><td class="n">85</td><td class="n">61</td><td class="n">0</td><td class="n rate">13.93</td><td class="n rate">5.07</td><td class="era">86th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.0</td><td class="n">22</td><td class="n">304</td><td class="n">0</td><td class="n rate">0.72</td><td class="n rate">0.25</td><td class="era">17th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.1</td><td class="n">7</td><td class="n">63</td><td class="n">0</td><td class="n rate">1.11</td><td class="n rate">0.72</td><td class="era">46th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.2</td><td class="n">13</td><td class="n">58</td><td class="n">0</td><td class="n rate">2.24</td><td class="n rate">1.51</td><td class="era">66th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.3</td><td class="n">95</td><td class="n">157</td><td class="n">0</td><td class="n rate">6.05</td><td class="n rate">3.52</td><td class="era">77th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.4</td><td class="n">20</td><td class="n">213</td><td class="n">0</td><td class="n rate">0.94</td><td class="n rate">0.67</td><td class="era">40th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.5</td><td class="n">9</td><td class="n">53</td><td class="n">0</td><td class="n rate">1.70</td><td class="n rate">1.04</td><td class="era">57th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.6</td><td class="n">6</td><td class="n">28</td><td class="n">0</td><td class="n rate">2.14</td><td class="n rate">1.13</td><td class="era">60th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.7</td><td class="n">88</td><td class="n">60</td><td class="n">0</td><td class="n rate">14.67</td><td class="n rate">8.73</td><td class="era">91st percentile</td></tr>
-          <tr class=""><td class="rel">v3.3.0</td><td class="n">42</td><td class="n">38</td><td class="n">0</td><td class="n rate">11.05</td><td class="n rate">6.66</td><td class="era">89th percentile</td></tr>
-          <tr class=""><td class="rel">v3.4.0</td><td class="n">6</td><td class="n">60</td><td class="n">0</td><td class="n rate">1.00</td><td class="n rate">0.66</td><td class="era">37th percentile</td></tr>
-          <tr class=""><td class="rel">v3.4.1</td><td class="n">59</td><td class="n">9</td><td class="n">0</td><td class="n rate">65.56</td><td class="n rate">39.39</td><td class="era">97th percentile</td></tr>
-          <tr class="claude-era"><td class="rel">v3.4.2</td><td class="n">0</td><td class="n">50</td><td class="n">9</td><td class="n rate">0.00</td><td class="n rate">0.00</td><td class="era">0th percentile</td></tr>
-          <tr class="claude-era"><td class="rel">v3.4.3</td><td class="n">17</td><td class="n">34</td><td class="n">28</td><td class="n rate">5.00</td><td class="n rate">3.29</td><td class="era">77th percentile</td></tr>
+                    <tr class=""><td class="rel">v2.4.6</td><td class="n">2</td><td class="n">1.2</td><td class="n">13</td><td class="n">0</td><td class="n rate">1.54</td><td class="n rate">0.92</td><td class="era">54th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.0</td><td class="n">4</td><td class="n">1.3</td><td class="n">73</td><td class="n">0</td><td class="n rate">0.55</td><td class="n rate">0.18</td><td class="era">11th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.1</td><td class="n">4</td><td class="n">1.8</td><td class="n">69</td><td class="n">0</td><td class="n rate">0.58</td><td class="n rate">0.26</td><td class="era">20th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.2</td><td class="n">6</td><td class="n">2.9</td><td class="n">117</td><td class="n">0</td><td class="n rate">0.51</td><td class="n rate">0.25</td><td class="era">14th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.4</td><td class="n">5</td><td class="n">3.5</td><td class="n">21</td><td class="n">0</td><td class="n rate">2.38</td><td class="n rate">1.64</td><td class="era">69th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.5</td><td class="n">22</td><td class="n">11.6</td><td class="n">88</td><td class="n">0</td><td class="n rate">2.50</td><td class="n rate">1.32</td><td class="era">63rd percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.6</td><td class="n">14</td><td class="n">6.6</td><td class="n">239</td><td class="n">0</td><td class="n rate">0.59</td><td class="n rate">0.28</td><td class="era">23rd percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.0</td><td class="n">8</td><td class="n">4.7</td><td class="n">267</td><td class="n">0</td><td class="n rate">0.30</td><td class="n rate">0.18</td><td class="era">9th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.1</td><td class="n">5</td><td class="n">3.3</td><td class="n">444</td><td class="n">0</td><td class="n rate">0.11</td><td class="n rate">0.08</td><td class="era">0th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.2</td><td class="n">29</td><td class="n">16.8</td><td class="n">17</td><td class="n">0</td><td class="n rate">17.06</td><td class="n rate">9.88</td><td class="era">94th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.3</td><td class="n">49</td><td class="n">22.7</td><td class="n">381</td><td class="n">0</td><td class="n rate">1.29</td><td class="n rate">0.59</td><td class="era">34th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.4</td><td class="n">22</td><td class="n">9.4</td><td class="n">760</td><td class="n">0</td><td class="n rate">0.29</td><td class="n rate">0.12</td><td class="era">6th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.5</td><td class="n">16</td><td class="n">7.1</td><td class="n">146</td><td class="n">0</td><td class="n rate">1.10</td><td class="n rate">0.49</td><td class="era">31st percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.7</td><td class="n">15</td><td class="n">5.8</td><td class="n">649</td><td class="n">0</td><td class="n rate">0.23</td><td class="n rate">0.09</td><td class="era">3rd percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.8</td><td class="n">12</td><td class="n">5.4</td><td class="n">72</td><td class="n">0</td><td class="n rate">1.67</td><td class="n rate">0.74</td><td class="era">49th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.9</td><td class="n">53</td><td class="n">18.8</td><td class="n">261</td><td class="n">0</td><td class="n rate">2.03</td><td class="n rate">0.72</td><td class="era">43rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.0</td><td class="n">64</td><td class="n">27.9</td><td class="n">909</td><td class="n">0</td><td class="n rate">0.70</td><td class="n rate">0.31</td><td class="era">26th percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.1</td><td class="n">6</td><td class="n">4.0</td><td class="n">102</td><td class="n">0</td><td class="n rate">0.59</td><td class="n rate">0.40</td><td class="era">29th percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.2</td><td class="n">10</td><td class="n">4.1</td><td class="n">9</td><td class="n">0</td><td class="n rate">11.11</td><td class="n rate">4.56</td><td class="era">80th percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.3</td><td class="n">22</td><td class="n">10.8</td><td class="n">55</td><td class="n">0</td><td class="n rate">4.00</td><td class="n rate">1.96</td><td class="era">71st percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.0</td><td class="n">170</td><td class="n">52.4</td><td class="n">571</td><td class="n">0</td><td class="n rate">2.98</td><td class="n rate">0.92</td><td class="era">51st percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.1</td><td class="n">68</td><td class="n">32.1</td><td class="n">66</td><td class="n">0</td><td class="n rate">10.30</td><td class="n rate">4.86</td><td class="era">83rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.2</td><td class="n">55</td><td class="n">18.4</td><td class="n">57</td><td class="n">0</td><td class="n rate">9.65</td><td class="n rate">3.22</td><td class="era">74th percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.3</td><td class="n">85</td><td class="n">30.9</td><td class="n">61</td><td class="n">0</td><td class="n rate">13.93</td><td class="n rate">5.07</td><td class="era">86th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.0</td><td class="n">22</td><td class="n">7.8</td><td class="n">304</td><td class="n">0</td><td class="n rate">0.72</td><td class="n rate">0.25</td><td class="era">17th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.1</td><td class="n">7</td><td class="n">4.5</td><td class="n">63</td><td class="n">0</td><td class="n rate">1.11</td><td class="n rate">0.72</td><td class="era">46th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.2</td><td class="n">13</td><td class="n">8.8</td><td class="n">58</td><td class="n">0</td><td class="n rate">2.24</td><td class="n rate">1.51</td><td class="era">66th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.3</td><td class="n">95</td><td class="n">55.3</td><td class="n">157</td><td class="n">0</td><td class="n rate">6.05</td><td class="n rate">3.52</td><td class="era">77th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.4</td><td class="n">20</td><td class="n">14.3</td><td class="n">213</td><td class="n">0</td><td class="n rate">0.94</td><td class="n rate">0.67</td><td class="era">40th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.5</td><td class="n">9</td><td class="n">5.5</td><td class="n">53</td><td class="n">0</td><td class="n rate">1.70</td><td class="n rate">1.04</td><td class="era">57th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.6</td><td class="n">6</td><td class="n">3.2</td><td class="n">28</td><td class="n">0</td><td class="n rate">2.14</td><td class="n rate">1.13</td><td class="era">60th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.7</td><td class="n">88</td><td class="n">52.4</td><td class="n">60</td><td class="n">0</td><td class="n rate">14.67</td><td class="n rate">8.73</td><td class="era">91st percentile</td></tr>
+          <tr class=""><td class="rel">v3.3.0</td><td class="n">42</td><td class="n">25.3</td><td class="n">38</td><td class="n">0</td><td class="n rate">11.05</td><td class="n rate">6.66</td><td class="era">89th percentile</td></tr>
+          <tr class=""><td class="rel">v3.4.0</td><td class="n">6</td><td class="n">4.0</td><td class="n">60</td><td class="n">0</td><td class="n rate">1.00</td><td class="n rate">0.66</td><td class="era">37th percentile</td></tr>
+          <tr class=""><td class="rel">v3.4.1</td><td class="n">59</td><td class="n">35.5</td><td class="n">9</td><td class="n">0</td><td class="n rate">65.56</td><td class="n rate">39.39</td><td class="era">97th percentile</td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.2</td><td class="n">0</td><td class="n">0.0</td><td class="n">50</td><td class="n">9</td><td class="n rate">0.00</td><td class="n rate">0.00</td><td class="era">0th percentile</td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.3</td><td class="n">17</td><td class="n">11.2</td><td class="n">34</td><td class="n">28</td><td class="n rate">5.00</td><td class="n rate">3.29</td><td class="era">77th percentile</td></tr>
           
                 </tbody>
             </table>

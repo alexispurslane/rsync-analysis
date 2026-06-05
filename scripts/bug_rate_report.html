@@ -20,7 +20,7 @@
             complicated, answers only one question: are the Claude-assisted releases unusually buggy?</p>
         <div class="hero-meta">
             Repository: <a href="https://github.com/RsyncProject/rsync">RsyncProject/rsync</a><br>
-            Method: bugs per 10 commits, exact permutation test
+            Method: severity-weighted bugs per 10 commits, exact permutation test
         </div>
     </header>
 
@@ -227,7 +227,7 @@
 
         <h3>How bugs are found and assigned to releases</h3>
 
-        <p>Bug counts come from three sources:</p>
+        <p>Bug reports come from three sources:</p>
 
         <ol>
             <li>GitHub issues in the rsync repository (collated via the GitHub REST API),</li>
@@ -240,6 +240,36 @@
             release that shipped before the bug was reported. For Bugzilla, each entry has a "Version" field that
             explicitly states which release the bug was reported against, and bugs
             are attributed to that release.</p>
+
+        <h3>Severity scoring</h3>
+
+        <p>To control for bug severity — so that, as someone on HN said, a typo in a button and a CVE aren't rated
+            equally — every bug report was scored for severity on a
+            0–100 scale. The scorer is <a href="https://huggingface.co/Qwen/Qwen3-35B">Qwen&nbsp;3 35B</a>,
+            a small open-weight language model, prompted as a senior reliability engineer assessing real-world impact.
+            Each bug report was given to the model as its title and body text (truncated to 3,000 characters),
+            along with the following rubric:</p>
+
+        $severity_rubric_table
+
+        <p>All three bug sources — GitHub issues, Bugzilla, and the rsync mailing list — were scored. Bugzilla and
+            mailing list reports had only a title (no body), so the model scored those from the title alone. The model
+            was instructed to fall back on the title and lean toward the middle of the range (40–60) when the body
+            didn't provide enough information. The model was also told to output only a severity integer via
+            <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/">structured output</a>
+            (JSON schema), so there were no free-text responses to parse. Scoring was done at temperature&nbsp;0
+            for determinism — the same input always produces the same score.
+        </p>
+
+        <p>Issues scored severity&nbsp;0 — feature requests, spam, off-topic rants about AI, empty submissions — are
+            excluded from bug counts by default. This matters because some releases attracted a lot of noise on
+            GitHub. v3.4.2 had four issues filed; the model scored all four at severity&nbsp;0 (a feature-request
+            option, a missing tarball question, and two more feature requests).
+        </p>
+
+        <p>Example scores from the database, one per tier:</p>
+
+        $severity_examples
 
         <h3>Why the release is the unit of analysis</h3>
 
@@ -272,7 +302,9 @@
             releases went up. Therefore, the simplest honest response is to analyize precisely what is being claimed:
             bugs, commits, releases, and Claude-exposed commits. If the Claude releases sit in the middle of the
             historical distribution, the burden shifts to the critics to explain why this particular middle is somehow
-            worse than all the other middles that came before it. Even if that results in is shifting the conversation
+            worse than all the other middles that came before it. Even by weighting by severity, I feel that I am giving extensive generosity to the anti-AI point in all this, but enough of the more intelligent critics brought it up that I found it worth it.</p>
+
+        <p>Even if that results in is shifting the conversation
             toward a more nuanced discussion of the <i>quality</i> and <i>type</i> and <i>user impact</i> of the bugs in
             the releases, it will already have been a major win for the pro-AI crowd, and a shifting of the goalposts
             for the anti-AI crowd, and then we can do further analysis based on that. And the ball's in the anti-AI
@@ -280,40 +312,10 @@
 
         <h3>What this approach does not do</h3>
 
-        <p>I'm aware that this metric does not control for commit complexity, security intensity, or bug severity. It
-            does not distinguish
-            between a one-line typo fix and a CVE patch. It is a blunt instrument. But the critics' accusation is also
+        <p>I'm aware that this metric does not control for commit complexity or security intensity. It is a blunt
+            instrument. But the critics' accusation is also
             blunt: "Claude is making things worse." A blunt instrument is what is required in response. Blood begets
             blood.</p>
-
-        <h3>Severity scoring</h3>
-
-        <p>To check whether the raw bug count tells the whole story, every bug report was scored for severity on a
-            0–100 scale. The scorer is <a href="https://huggingface.co/Qwen/Qwen3-35B">Qwen&nbsp;3 35B</a>,
-            a small open-weight language model, prompted as a senior reliability engineer assessing real-world impact.
-            Each bug report was given to the model as its title and body text (truncated to 3,000 characters),
-            along with the following rubric:</p>
-
-        $severity_rubric_table
-
-        <p>All three bug sources — GitHub issues, Bugzilla, and the rsync mailing list — were scored. Bugzilla and
-            mailing list reports had only a title (no body), so the model scored those from the title alone. The model
-            was instructed to fall back on the title and lean toward the middle of the range (40–60) when the body
-            didn't provide enough information. The model was also told to output only a severity integer via
-            <a href="https://openai.com/index/introducing-structured-outputs-in-the-api/">structured output</a>
-            (JSON schema), so there were no free-text responses to parse. Scoring was done at temperature&nbsp;0
-            for determinism — the same input always produces the same score.
-        </p>
-
-        <p>Issues scored severity&nbsp;0 — feature requests, spam, off-topic rants about AI, empty submissions — are
-            excluded from bug counts by default. This matters because some releases attracted a lot of noise on
-            GitHub. v3.4.2 had four issues filed; the model scored all four at severity&nbsp;0 (a feature-request
-            option, a missing tarball question, and two more feature requests).
-        </p>
-
-        <p>Example scores from the database, one per tier:</p>
-
-        $severity_examples
 
     </section>
 
@@ -456,6 +458,60 @@
             no evidence Claude usage bends releases in either direction.
         </p>
 
+        <h3>Commit Rate</h3>
+
+        <p>One possible objection I've seen is that while perhaps the defect rate of Claude-authored commits is not
+            worse than human-authored ones, Claude sped up developmend so much — due to "vibe coding" perhaps — that the
+            total number of bugs in each release got too high for comfort anyway, in which case it doesn't matter that
+            the defect rate per commit isn't so bad, because that's not what downstream users experience. We can check
+            this, though:</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=$commit_perm_p_str</div>
+            <div class="result-label">exact permutation test: do Claude releases have more commits?</div>
+            <div class="result-detail">
+                Claude releases averaged $claude_commit_mean_str commits; non-Claude releases averaged
+                $hist_commit_mean_str. If you pick any $n_claude_releases releases at random, you'd see as many
+                or more commits $commit_perm_p_str of the time.
+            </div>
+        </div>
+
+        <p>So it seems that Claude releases did not have meaningfully
+            more commits. If anything, they had <i>a lot fewer</i>, but of course, the data is underpowered to say that
+            for sure; just like the rest of this article, I'm only trying to show a startling <i>lack</i> of evidence
+            for the supposed massive harms of using Claude, not trying to prove there must have been none, or that it
+            was even "beneficial" in terms of focused releases.</p>
+
+        <p>But commit count is a blunt measure. A commit can be a one-line typo fix or a rewrite of the entire
+            protocol handler. What about lines of code changed? GitHub's compare API gives us additions and deletions
+            between each pair of consecutive tags:</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=$lines_perm_p_str</div>
+            <div class="result-label">exact permutation test: do Claude releases have more lines changed?</div>
+            <div class="result-detail">
+                Claude releases averaged $claude_lines_mean_str lines changed; non-Claude releases averaged
+                $hist_lines_mean_str. If you pick any $n_claude_releases releases at random, you'd see as many
+                or more lines changed only $lines_perm_p_str of the time. Claude releases <em>were</em> larger
+                by this measure.
+            </div>
+        </div>
+
+        <p>Lines changed went up by a lot. But did absolute bug numbers?</p>
+
+        <div class="result-callout">
+            <div class="result-number">p=$sev_perm_p_str</div>
+            <div class="result-label">exact permutation test: do Claude releases have more severity-weighted bugs?</div>
+            <div class="result-detail">
+                Claude releases averaged $claude_sev_mean_str severity-weighted bugs; non-Claude releases averaged
+                $hist_sev_mean_str. If you pick any $n_claude_releases releases at random, you'd see as many
+                or more severity-weighted bugs $sev_perm_p_str of the time. More lines changed, but not more bugs.
+            </div>
+        </div>
+
+        <p>So: the Claude releases changed way more lines of code than historical ones, but didn't have more bugs.
+            More code, same bugs. That's not what you'd expect if Claude were making things worse.</p>
+
         <h3>Regime Check</h3>
 
         <p>The obvious counterargument is that maybe <i>earlier</i> rsync releases were less in maintenence-mode, and so
@@ -545,6 +601,7 @@
                     <tr>
                         <th>Release</th>
                         <th>Bugs</th>
+                        <th>Sev</th>
                         <th>Commits</th>
                         <th>Claude</th>
                         <th>Bugs/10c</th>

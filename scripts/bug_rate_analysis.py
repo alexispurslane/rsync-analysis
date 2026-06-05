@@ -157,7 +157,7 @@ def log_pct(rate: float) -> float:
 
 # ── HTML generation ──
 
-def generate_report(releases: list[dict], severity_sums: dict[str, float] | None = None, severity_examples: str = "") -> str:
+def generate_report(releases: list[dict], severity_sums: dict[str, float] | None = None, severity_examples: str = "", tag_diffs: dict[str, int] | None = None) -> str:
     # Inclusion logic:
     #   - Always include GitHub-era releases (v3.2.0+) that have commits —
     #     if they have 0 bugs that's signal, not missing data.
@@ -171,6 +171,7 @@ def generate_report(releases: list[dict], severity_sums: dict[str, float] | None
         r["bugs_10c"] = r["bugs"] * 10 / r["commits"]
         sev_sum = severity_sums.get(r["tag"], 0.0) if severity_sums else 0.0
         r["sev_10c"] = sev_sum * 10 / r["commits"]
+        r["sev_sum"] = sev_sum
 
     # The primary metric is severity-weighted: sev_10c
     # bugs_10c is kept for the table only.
@@ -304,6 +305,7 @@ def generate_report(releases: list[dict], severity_sums: dict[str, float] | None
             f'<tr class="{"claude-era" if is_c else ""}">'
             f'<td class="rel">{r["tag"]}</td>'
             f'<td class="n">{r["bugs"]}</td>'
+            f'<td class="n">{r["sev_sum"]:.1f}</td>'
             f'<td class="n">{r["commits"]}</td>'
             f'<td class="n">{r["claude"]}</td>'
             f'<td class="n rate">{r["bugs_10c"]:.2f}</td>'
@@ -427,6 +429,51 @@ def generate_report(releases: list[dict], severity_sums: dict[str, float] | None
         hist_claude_ratio_str = "\u221e\u00d7"
         hist_claude_ratio_desc_str = "infinitely higher than"
 
+    # ── Commit rate permutation test ──
+    hist_commit_rates = [r["commits"] for r in hist_only]
+    claude_commit_mean = np.mean([r["commits"] for r in claude])
+    hist_commit_mean = np.mean(hist_commit_rates)
+    n_commit_extreme = sum(
+        1 for combo in combinations(range(len(hist_commit_rates)), k_bug)
+        if np.mean([hist_commit_rates[i] for i in combo]) >= claude_commit_mean
+    )
+    commit_perm_p = n_commit_extreme / n_total
+
+    # ── Lines changed permutation test ──
+    if tag_diffs:
+        for r in with_data:
+            r["changes"] = tag_diffs.get(r["tag"])
+        has_changes = [r for r in with_data if r["changes"] is not None]
+        hist_changes = [r["changes"] for r in has_changes if not r["is_claude"]]
+        claude_changes = [r["changes"] for r in has_changes if r["is_claude"]]
+        if claude_changes:
+            claude_lines_mean = np.mean(claude_changes)
+            hist_lines_mean = np.mean(hist_changes)
+            n_lines_extreme = sum(
+                1 for combo in combinations(range(len(hist_changes)), k_bug)
+                if np.mean([hist_changes[i] for i in combo]) >= claude_lines_mean
+            )
+            lines_perm_p = n_lines_extreme / n_total
+        else:
+            claude_lines_mean = 0
+            hist_lines_mean = np.mean(hist_changes) if hist_changes else 0
+            lines_perm_p = 1.0
+    else:
+        claude_lines_mean = 0
+        hist_lines_mean = 0
+        lines_perm_p = 1.0
+
+    # ── Absolute severity-weighted bug count permutation test ──
+    hist_sev = [r["sev_sum"] for r in with_data if not r["is_claude"]]
+    claude_sev = [r["sev_sum"] for r in claude]
+    claude_sev_mean = np.mean(claude_sev)
+    hist_sev_mean = np.mean(hist_sev)
+    n_sev_extreme = sum(
+        1 for combo in combinations(range(len(hist_sev)), k_bug)
+        if np.mean([hist_sev[i] for i in combo]) >= claude_sev_mean
+    )
+    sev_perm_p = n_sev_extreme / n_total
+
     html = template.substitute(
         severity_rubric_table=build_rubric_html(),
         severity_examples=severity_examples,
@@ -474,6 +521,15 @@ def generate_report(releases: list[dict], severity_sums: dict[str, float] | None
         claude_worst_pctile=claude_worst_pctile,
         claude_worst_pctile_str=ordinal(claude_worst_pctile),
         n_higher_than_worst_claude=n_higher_than_worst,
+        commit_perm_p_str=f"{commit_perm_p:.0%}",
+        claude_commit_mean_str=f"{claude_commit_mean:.0f}",
+        hist_commit_mean_str=f"{hist_commit_mean:.0f}",
+        lines_perm_p_str=f"{lines_perm_p:.0%}",
+        claude_lines_mean_str=f"{claude_lines_mean:.0f}",
+        hist_lines_mean_str=f"{hist_lines_mean:.0f}",
+        sev_perm_p_str=f"{sev_perm_p:.0%}",
+        claude_sev_mean_str=f"{claude_sev_mean:.1f}",
+        hist_sev_mean_str=f"{hist_sev_mean:.1f}",
         claude_v3_ranks=v3_strip_items,
         n_v3=n_v3,
     )
@@ -521,9 +577,14 @@ def main() -> None:
     releases = load_data(con, filter_nonbugs=filter_nonbugs)
     severity_sums = load_severity_sums(con, filter_nonbugs=filter_nonbugs)
     severity_examples = build_severity_examples(con)
+    # Load line-change data from tag_diff_stats
+    try:
+        tag_diffs = {r[0]: r[1] for r in con.execute("SELECT tag_name, changes FROM tag_diff_stats").fetchall()}
+    except Exception:
+        tag_diffs = {}
     con.close()
 
-    html = generate_report(releases, severity_sums=severity_sums, severity_examples=severity_examples)
+    html = generate_report(releases, severity_sums=severity_sums, severity_examples=severity_examples, tag_diffs=tag_diffs)
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     out_name = "index.html" if filter_nonbugs else "index_unfiltered.html"

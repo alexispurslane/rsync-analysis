@@ -88,6 +88,41 @@ def fetch_commits() -> list[dict]:
     return rows
 
 
+def fetch_tag_diffs() -> list[dict]:
+    """Fetch additions/deletions between consecutive tags via the compare API."""
+    print("Fetching tag diff stats...", flush=True)
+
+    # Get ordered tags
+    tags = paginate(f"repos/{REPO}/tags", {"per_page": PER_PAGE})
+    tag_names = [t["name"] for t in tags if not t["name"].startswith("mbp")]
+    tag_names.reverse()  # oldest first
+
+    rows = []
+    for i in range(1, len(tag_names)):
+        base = tag_names[i - 1]
+        head = tag_names[i]
+        try:
+            result = gh_api(f"repos/{REPO}/compare/{base}...{head}")
+            files = result.get("files", [])
+            additions = sum(f.get("additions", 0) for f in files)
+            deletions = sum(f.get("deletions", 0) for f in files)
+            rows.append({
+                "tag_name": head,
+                "base_tag": base,
+                "additions": additions,
+                "deletions": deletions,
+                "changes": additions + deletions,
+                "files_changed": len(files),
+                "commits_in_range": result.get("total_commits", 0),
+            })
+            print(f"  {base} → {head}: +{additions}/-{deletions} ({len(files)} files)", flush=True)
+        except Exception as e:
+            print(f"  {base} → {head}: ERROR {e}", flush=True)
+
+    print(f"  Got diff stats for {len(rows)} tag pairs", flush=True)
+    return rows
+
+
 def fetch_bugs() -> list[dict]:
     """Fetch all bug reports and feature requests (excluding PRs).
     Enhancement and question issues are kept — they'll be scored severity=0
@@ -125,7 +160,7 @@ def fetch_bugs() -> list[dict]:
     return rows
 
 
-def insert_into_duckdb(commits: list[dict], bugs: list[dict]):
+def insert_into_duckdb(commits: list[dict], bugs: list[dict], tag_diffs: list[dict]):
     """Create tables and insert all data into DuckDB."""
     print(f"\nLoading data into DuckDB: {DB_PATH}", flush=True)
 
@@ -188,6 +223,7 @@ def insert_into_duckdb(commits: list[dict], bugs: list[dict]):
 
     insert_rows("commits", commits)
     insert_rows("bugs", bugs)
+    insert_rows("tag_diff_stats", tag_diffs)
 
     # Create indices
     con.execute("CREATE INDEX idx_commits_author ON commits(author_login)")
@@ -197,6 +233,19 @@ def insert_into_duckdb(commits: list[dict], bugs: list[dict]):
     con.execute("CREATE INDEX idx_bugs_user ON bugs(user_login)")
     con.execute("CREATE INDEX idx_bugs_state ON bugs(state)")
     con.execute("CREATE INDEX idx_bugs_created ON bugs(created_at)")
+
+    # Tag diff stats table
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS tag_diff_stats (
+            tag_name           VARCHAR PRIMARY KEY,
+            base_tag           VARCHAR,
+            additions          INTEGER,
+            deletions          INTEGER,
+            changes           INTEGER,
+            files_changed      INTEGER,
+            commits_in_range   INTEGER
+        )
+    """)
 
     con.close()
     print("Done! Database saved.", flush=True)
@@ -209,13 +258,14 @@ def main():
 
     commits = fetch_commits()
     bugs = fetch_bugs()
+    tag_diffs = fetch_tag_diffs()
 
-    insert_into_duckdb(commits, bugs)
+    insert_into_duckdb(commits, bugs, tag_diffs)
 
     # Quick verification
     con = duckdb.connect(str(DB_PATH), read_only=True)
     print("\n--- Verification ---")
-    for table in ["commits", "bugs"]:
+    for table in ["commits", "bugs", "tag_diff_stats"]:
         count = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
         print(f"  {table}: {count} rows")
     con.close()
