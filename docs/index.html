@@ -27,6 +27,14 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
 .c .pctile{color:var(--pos);font-weight:600;margin-top:.5rem;font-size:.95rem}
 .c .iqr-tag{color:var(--pos);font-weight:700;margin-top:.5rem;font-size:.95rem}
 
+/* ── Mean comparison bar ── */
+.mean-bar{display:flex;align-items:center;gap:1rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--bdr)}
+.mean-bar .label{font-size:.8rem;color:var(--muted);font-family:var(--m)}
+.mean-bar .val{font-size:1.1rem;font-weight:700;font-family:var(--m)}
+.mean-bar .hist{color:var(--accent)}
+.mean-bar .claude{color:var(--pos)}
+.mean-bar .vs{font-size:.7rem;color:var(--muted);font-family:var(--m)}
+
 /* ── Significance card ── */
 .sig{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border-left:4px solid var(--pos)}
 .sig .p{font-size:3rem;font-weight:800;font-family:var(--m);color:var(--pos)}
@@ -39,43 +47,27 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
   position:relative;height:100px;margin:2.5rem 0 .5rem;
   background:#fff;border-radius:6px;border:1px solid var(--bdr);
 }
-/* Greyed-out outside-IQR regions */
 .outside{
   position:absolute;top:0;bottom:0;
   background:rgba(0,0,0,.22);pointer-events:none;z-index:0;
 }
-/* IQR green band */
 .iqr{
   position:absolute;top:0;bottom:0;
   background:rgba(45,106,79,.22);
   border-left:4px solid var(--pos);border-right:4px solid var(--pos);
   pointer-events:none;z-index:0;
 }
-/* "middle 50%" centered label inside the band */
 .iqr-center{
   position:absolute;top:-18px;transform:translateX(-50%);
   font-size:.85rem;font-family:var(--m);font-weight:800;
   color:var(--pos);letter-spacing:.1em;text-transform:uppercase;opacity:.5;
   pointer-events:none;z-index:1;white-space:nowrap;
 }
-/* Q1/Q3 boundary labels at the edges */
-.q-label{
-  position:absolute;bottom:4px;transform:translateX(-50%);
-  pointer-events:none;z-index:4;text-align:center;
-}
-.q-val{
-  display:inline-block;font-size:.7rem;color:var(--pos);
-  font-family:var(--m);font-weight:800;
-  background:var(--bg);padding:2px 6px;
-  border:2px solid var(--pos);border-radius:4px;
-}
-/* Median line */
 .med{
   position:absolute;top:0;bottom:0;width:2px;
   background:var(--pos);opacity:.3;pointer-events:none;
   transform:translateX(-50%);z-index:0;
 }
-/* Dots */
 .dot{
   position:absolute;top:50%;transform:translate(-50%,-50%);
   border-radius:50%;cursor:help;z-index:1;opacity:.35;
@@ -84,7 +76,6 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
   opacity:1;z-index:2;
   box-shadow:0 0 0 3px rgba(45,106,79,.3);
 }
-/* Claude dot labels */
 .dot-tag{
   position:absolute;top:calc(50% + 18px);transform:translateX(-50%);
   font-size:.7rem;font-family:var(--m);font-weight:800;
@@ -100,14 +91,6 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
 .axis{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--m);margin-top:4px}
 .legend{display:flex;gap:1.5rem;margin-top:.75rem;font-size:.85rem;color:var(--muted);flex-wrap:wrap}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem;vertical-align:middle}
-
-/* ── Time-series chart ── */
-.ts-chart{width:100%;height:340px;margin:2rem 0 .5rem;background:#fff;border-radius:6px;border:1px solid var(--bdr);overflow:visible}
-.ts-bar{cursor:help}
-.ts-label{font-size:.65rem;font-family:var(--m);font-weight:700;fill:var(--pos);text-anchor:middle}
-.ts-y-label{font-size:.6rem;fill:var(--muted);font-family:var(--m);dominant-baseline:hanging}
-.ts-x-label{font-size:.55rem;fill:var(--muted);font-family:var(--m);text-anchor:end}
-.ts-grid{stroke:var(--bdr);stroke-width:.5;stroke-dasharray:4 3}
 </style></head><body>
 
 <h1>Bugs per 10 Commits</h1>
@@ -176,6 +159,17 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
   </span>
 </div>
 
+<h2>Claude Releases</h2>
+<div class="g">
+  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31th percentile (rank 11 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div>
+</div>
+<div class="mean-bar">
+  <span class="label">Claude mean:</span> <span class="val claude">3.78</span>
+  <span class="vs">vs</span>
+  <span class="label">Historical mean:</span> <span class="val hist">7.60</span>
+  <span class="vs">(0.5×)</span>
+</div>
+
 <h2>Is This Chance?</h2>
 <div class="sig">
   <div class="p">p = 0.46</div>
@@ -188,67 +182,6 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
     Claude mean Bugs/10c: 3.78 · Historical mean: 7.60 · Claude is lower<br/>
     v3.4.2: 0.80 Bugs/10c — rank 11/35 in historical distribution<br/>v3.4.3: 6.76 Bugs/10c — rank 26/35 in historical distribution
   </div>
-</div>
-
-<h2>Claude Releases</h2>
-<div class="g">
-  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31th percentile (rank 11 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div><div class="d iqr-tag">Inside the middle 50% (0.65–6.82)</div></div>
-</div>
-
-<h2>WtSec/10c Over Time</h2>
-<svg class="ts-chart" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet">
-  <line x1="60" y1="250.0" x2="880" y2="250.0" class="ts-grid"/><text x="55" y="254.0" class="ts-y-label">0.01</text><line x1="60" y1="226.9" x2="880" y2="226.9" class="ts-grid"/><text x="55" y="230.9" class="ts-y-label">0.02</text><line x1="60" y1="196.4" x2="880" y2="196.4" class="ts-grid"/><text x="55" y="200.4" class="ts-y-label">0.05</text><line x1="60" y1="173.3" x2="880" y2="173.3" class="ts-grid"/><text x="55" y="177.3" class="ts-y-label">0.1</text><line x1="60" y1="150.3" x2="880" y2="150.3" class="ts-grid"/><text x="55" y="154.3" class="ts-y-label">0.2</text><line x1="60" y1="119.7" x2="880" y2="119.7" class="ts-grid"/><text x="55" y="123.7" class="ts-y-label">0.5</text><line x1="60" y1="96.7" x2="880" y2="96.7" class="ts-grid"/><text x="55" y="100.7" class="ts-y-label">1</text><line x1="60" y1="73.6" x2="880" y2="73.6" class="ts-grid"/><text x="55" y="77.6" class="ts-y-label">2</text><line x1="60" y1="43.1" x2="880" y2="43.1" class="ts-grid"/><text x="55" y="47.1" class="ts-y-label">5</text><line x1="60" y1="20.0" x2="880" y2="20.0" class="ts-grid"/><text x="55" y="24.0" class="ts-y-label">10</text><rect x="62.9" y="197.6" width="17.6" height="52.4" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v1.6.4: 0.05 WtSec/10c</title></rect>
-<text x="71.7" y="264.0" class="ts-x-label" transform="rotate(-40 71.7 264.0)">v1.6.4</text>
-<rect x="86.4" y="133.2" width="17.6" height="116.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v1.6.9: 0.33 WtSec/10c</title></rect>
-<rect x="109.8" y="142.8" width="17.6" height="107.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.11: 0.25 WtSec/10c</title></rect>
-<rect x="133.2" y="73.6" width="17.6" height="176.4" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.18: 2.00 WtSec/10c</title></rect>
-<rect x="156.6" y="104.1" width="17.6" height="145.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.0.4: 0.80 WtSec/10c</title></rect>
-<rect x="180.1" y="186.8" width="17.6" height="63.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.3.0: 0.07 WtSec/10c</title></rect>
-<text x="188.9" y="264.0" class="ts-x-label" transform="rotate(-40 188.9 264.0)">v2.3.0</text>
-<rect x="203.5" y="124.4" width="17.6" height="125.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.3.2: 0.43 WtSec/10c</title></rect>
-<rect x="226.9" y="184.5" width="17.6" height="65.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.4.0: 0.07 WtSec/10c</title></rect>
-<rect x="250.4" y="209.1" width="17.6" height="40.9" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.2: 0.03 WtSec/10c</title></rect>
-<rect x="273.8" y="153.9" width="17.6" height="96.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.3: 0.18 WtSec/10c</title></rect>
-<rect x="297.2" y="232.9" width="17.6" height="17.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.5.6: 0.02 WtSec/10c</title></rect>
-<rect x="320.6" y="200.0" width="17.6" height="50.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.0: 0.04 WtSec/10c</title></rect>
-<text x="329.4" y="264.0" class="ts-x-label" transform="rotate(-40 329.4 264.0)">v2.6.0</text>
-<rect x="344.1" y="188.7" width="17.6" height="61.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.1: 0.06 WtSec/10c</title></rect>
-<rect x="367.5" y="202.2" width="17.6" height="47.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.3: 0.04 WtSec/10c</title></rect>
-<rect x="390.9" y="234.8" width="17.6" height="15.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.4: 0.02 WtSec/10c</title></rect>
-<rect x="414.4" y="193.4" width="17.6" height="56.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.5: 0.05 WtSec/10c</title></rect>
-<rect x="437.8" y="199.0" width="17.6" height="51.0" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.7: 0.05 WtSec/10c</title></rect>
-<rect x="461.2" y="169.8" width="17.6" height="80.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.8: 0.11 WtSec/10c</title></rect>
-<rect x="484.6" y="212.7" width="17.6" height="37.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v2.6.9: 0.03 WtSec/10c</title></rect>
-<rect x="508.1" y="217.7" width="17.6" height="32.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.0: 0.03 WtSec/10c</title></rect>
-<text x="516.9" y="264.0" class="ts-x-label" transform="rotate(-40 516.9 264.0)">v3.0.0</text>
-<rect x="531.5" y="123.7" width="17.6" height="126.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.2: 0.44 WtSec/10c</title></rect>
-<rect x="554.9" y="183.9" width="17.6" height="66.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.0.3: 0.07 WtSec/10c</title></rect>
-<rect x="578.4" y="215.7" width="17.6" height="34.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.0: 0.03 WtSec/10c</title></rect>
-<text x="587.1" y="264.0" class="ts-x-label" transform="rotate(-40 587.1 264.0)">v3.1.0</text>
-<rect x="601.8" y="166.9" width="17.6" height="83.1" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.1: 0.12 WtSec/10c</title></rect>
-<rect x="625.2" y="154.6" width="17.6" height="95.4" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.2: 0.18 WtSec/10c</title></rect>
-<rect x="648.6" y="187.4" width="17.6" height="62.6" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.1.3: 0.07 WtSec/10c</title></rect>
-<rect x="672.1" y="155.5" width="17.6" height="94.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.0: 0.17 WtSec/10c</title></rect>
-<text x="680.9" y="264.0" class="ts-x-label" transform="rotate(-40 680.9 264.0)">v3.2.0</text>
-<rect x="695.5" y="195.8" width="17.6" height="54.2" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.3: 0.05 WtSec/10c</title></rect>
-<rect x="718.9" y="166.7" width="17.6" height="83.3" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.4: 0.12 WtSec/10c</title></rect>
-<rect x="742.4" y="152.2" width="17.6" height="97.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.5: 0.19 WtSec/10c</title></rect>
-<rect x="765.8" y="161.5" width="17.6" height="88.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.2.6: 0.14 WtSec/10c</title></rect>
-<rect x="789.2" y="148.5" width="17.6" height="101.5" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.3.0: 0.21 WtSec/10c</title></rect>
-<text x="798.0" y="264.0" class="ts-x-label" transform="rotate(-40 798.0 264.0)">v3.3.0</text>
-<rect x="812.6" y="133.2" width="17.6" height="116.8" fill="#b44a1e" opacity="0.5" rx="1" class="ts-bar"><title>v3.4.0: 0.33 WtSec/10c</title></rect>
-<text x="821.4" y="264.0" class="ts-x-label" transform="rotate(-40 821.4 264.0)">v3.4.0</text>
-<rect x="836.1" y="100.9" width="17.6" height="149.1" fill="#2d6a4f" opacity="1" rx="1" class="ts-bar"><title>v3.4.2: 0.88 WtSec/10c</title></rect>
-<text x="844.9" y="96.9" class="ts-label">v3.4.2</text>
-<text x="844.9" y="264.0" class="ts-x-label" transform="rotate(-40 844.9 264.0)">v3.4.2</text>
-<rect x="859.5" y="46.8" width="17.6" height="203.2" fill="#2d6a4f" opacity="1" rx="1" class="ts-bar"><title>v3.4.3: 4.47 WtSec/10c</title></rect>
-<text x="868.3" y="42.8" class="ts-label">v3.4.3</text>
-<text x="868.3" y="264.0" class="ts-x-label" transform="rotate(-40 868.3 264.0)">v3.4.3</text>
-
-</svg>
-<div class="legend">
-  <span><i style="background:#b44a1e;opacity:.5"></i> Historical</span>
-  <span><i style="background:#2d6a4f"></i> Claude</span>
 </div>
 
 <h2>All Releases (chronological)</h2>

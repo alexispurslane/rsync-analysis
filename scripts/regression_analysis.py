@@ -31,7 +31,6 @@ def log_pct(rate: float) -> float:
     """Map bugs/10c to % position on a log scale (0.01→300 = 0→100%)."""
     if rate <= 0:
         return 0
-    # 4.5 decades: log10(0.01)=-2 maps to 0%, log10(~316)=2.5 maps to 100%
     return (np.log10(rate) + 2) / 4.5 * 100
 
 def generate_report(releases: list[dict]) -> str:
@@ -42,6 +41,8 @@ def generate_report(releases: list[dict]) -> str:
     historical = [r for r in with_data if not r["is_claude"]]
     claude = [r for r in with_data if r["is_claude"]]
     hist_rates = sorted(r["bugs_10c"] for r in historical)
+    claude_mean = np.mean([r["bugs_10c"] for r in claude])
+    hist_mean = np.mean(hist_rates)
 
     for r in claude:
         r["percentile"] = np.searchsorted(hist_rates, r["bugs_10c"]) / len(hist_rates) * 100
@@ -57,74 +58,23 @@ def generate_report(releases: list[dict]) -> str:
     q25_left = log_pct(q25)
     q75_left = log_pct(q75)
 
-    # ── Time-series (WtSec/10c over releases) ──
-    # Only include releases with positive wt_sec so log scale works
-    ts_releases = [r for r in releases if r["commits"] > 0 and r["wt_sec"] > 0]
-    ts_max = max(r["wt_sec"] / r["commits"] * 10 for r in ts_releases)
+    # ── Permutation test (Bugs/10c) ──
+    bug_all = with_data
+    bug_claude = [r for r in bug_all if r["is_claude"]]
+    bug_all_rates = [r["bugs_10c"] for r in bug_all]
+    n_bug = len(bug_all)
+    k_bug = len(bug_claude)
+    n_extreme = sum(
+        1 for combo in combinations(range(n_bug), k_bug)
+        if np.mean([bug_all_rates[i] for i in combo]) >= claude_mean
+    )
+    n_total = len(list(combinations(range(n_bug), k_bug)))
+    p_value = n_extreme / n_total
 
-    # Log scale spanning from 0.01 to just past ts_max
-    ts_log_floor = -2  # log10(0.01)
-    ts_log_ceil = np.ceil(np.log10(ts_max * 2))
-    ts_decades = ts_log_ceil - ts_log_floor
-
-    # SVG coordinate system
-    svg_w, svg_h = 900, 300
-    margin_l, chart_top, chart_bot = 60, 20, 250
-    chart_w = svg_w - margin_l - 20  # right padding
-    chart_h = chart_bot - chart_top
-
-    def ts_y(rate: float) -> float:
-        "Map rate to SVG y coordinate."
-        log_val = np.log10(rate) if rate > 0 else ts_log_floor
-        frac = (log_val - ts_log_floor) / ts_decades
-        return chart_bot - frac * chart_h
-
-    # Y-axis gridlines
-    ts_ticks = []
-    nice_vals = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]
-    for val in nice_vals:
-        if ts_log_floor <= np.log10(val) <= ts_log_ceil:
-            y = ts_y(val)
-            ts_ticks.append(
-                f'<line x1="{margin_l}" y1="{y:.1f}" x2="{margin_l + chart_w}" y2="{y:.1f}" class="ts-grid"/>'
-                f'<text x="{margin_l - 5}" y="{y + 4:.1f}" class="ts-y-label">{val}</text>'
-            )
-
-    n = len(ts_releases)
-    bar_w = chart_w / n * 0.75
-    ts_bars = []
-
-    for i, r in enumerate(ts_releases):
-        rate = r["wt_sec"] / r["commits"] * 10
-        is_c = r["is_claude"]
-        cx = margin_l + (i + 0.5) / n * chart_w  # center of bar
-        x = cx - bar_w / 2
-        y_top = ts_y(rate)
-        h = chart_bot - y_top
-        if h < 1 and not is_c:
-            continue
-        color = "#2d6a4f" if is_c else "#b44a1e"
-        opacity = "1" if is_c else "0.5"
-        ts_bars.append(
-            f'<rect x="{x:.1f}" y="{y_top:.1f}" width="{bar_w:.1f}" height="{max(h, 1):.1f}" '
-            f'fill="{color}" opacity="{opacity}" rx="1" class="ts-bar">'
-            f'<title>{r["tag"]}: {rate:.2f} WtSec/10c</title>'
-            f'</rect>\n'
-        )
-        # Label Claude bars
-        if is_c:
-            ts_bars.append(
-                f'<text x="{cx:.1f}" y="{y_top - 4:.1f}" class="ts-label">{r["tag"]}</text>\n'
-            )
-        # X-axis labels for select major versions
-        tag = r["tag"]
-        if tag in ("v1.6.4", "v2.0.0", "v2.3.0", "v2.5.0", "v2.6.0", "v3.0.0", "v3.1.0", "v3.2.0", "v3.3.0", "v3.4.0", "v3.4.2", "v3.4.3"):
-            ts_bars.append(
-                f'<text x="{cx:.1f}" y="{chart_bot + 14:.1f}" class="ts-x-label" '
-                f'transform="rotate(-40 {cx:.1f} {chart_bot + 14:.1f})">{tag}</text>\n'
-            )
-
-    ts_svg = ''.join(ts_ticks) + ''.join(ts_bars)
+    claude_ranks = []
+    for r in bug_claude:
+        rank = sum(1 for h in hist_rates if h <= r["bugs_10c"])
+        claude_ranks.append((r["tag"], r["bugs_10c"], rank, len(hist_rates)))
 
     # ── Table ──
     table_rows = ""
@@ -144,14 +94,10 @@ def generate_report(releases: list[dict]) -> str:
 
     # ── Strip chart ──
     strip_parts = [
-        # Grey out outside-IQR regions
         f'<div class="outside" style="right:{100 - q25_left:.1f}%"></div>',
         f'<div class="outside" style="left:{q75_left:.1f}%"></div>',
-        # IQR green band
         f'<div class="iqr" style="left:{q25_left:.1f}%;width:{q75_left - q25_left:.1f}%"></div>',
-        # Centered "middle 50%" watermark
         f'<div class="iqr-center" style="left:{(q25_left + q75_left) / 2:.1f}%">middle 50%</div>',
-        # Median line
         f'<div class="med" style="left:{log_pct(median):.1f}%"></div>',
     ]
 
@@ -167,7 +113,6 @@ def generate_report(releases: list[dict]) -> str:
             f'style="left:{left:.1f}%;background:{color};width:{size}px;height:{size}px" '
             f'title="{r["tag"]}: {r["bugs_10c"]:.2f} bugs/10c"></div>'
         )
-        # Label Claude dots
         if is_c:
             strip_parts.append(
                 f'<div class="dot-tag" style="left:{left:.1f}%">'
@@ -176,29 +121,6 @@ def generate_report(releases: list[dict]) -> str:
             )
 
     strip_items = "\n  ".join(strip_parts)
-
-    # ── Permutation test (Bugs/10c) ──
-    bug_all = [r for r in releases if r["bugs"] > 0 and r["commits"] > 0]
-    bug_claude = [r for r in bug_all if r["is_claude"]]
-    bug_hist = [r for r in bug_all if not r["is_claude"]]
-    bug_all_rates = [r["bugs_10c"] for r in bug_all]
-    bug_claude_mean = np.mean([r["bugs_10c"] for r in bug_claude])
-    bug_hist_mean = np.mean([r["bugs_10c"] for r in bug_hist])
-    n_bug = len(bug_all)
-    k_bug = len(bug_claude)
-    n_extreme = sum(
-        1 for combo in combinations(range(n_bug), k_bug)
-        if np.mean([bug_all_rates[i] for i in combo]) >= bug_claude_mean
-    )
-    n_total = len(list(combinations(range(n_bug), k_bug)))
-    p_value = n_extreme / n_total
-
-    # Ranks of Claude releases in the Bugs/10c distribution
-    bug_hist_rates_sorted = sorted(r["bugs_10c"] for r in bug_hist)
-    claude_ranks = []
-    for r in bug_claude:
-        rank = sum(1 for h in bug_hist_rates_sorted if h <= r["bugs_10c"])
-        claude_ranks.append((r["tag"], r["bugs_10c"], rank, len(bug_hist_rates_sorted)))
 
     # ── Claude cards ──
     claude_cards = ""
@@ -243,6 +165,14 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 .c .pctile{{color:var(--pos);font-weight:600;margin-top:.5rem;font-size:.95rem}}
 .c .iqr-tag{{color:var(--pos);font-weight:700;margin-top:.5rem;font-size:.95rem}}
 
+/* ── Mean comparison bar ── */
+.mean-bar{{display:flex;align-items:center;gap:1rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--bdr)}}
+.mean-bar .label{{font-size:.8rem;color:var(--muted);font-family:var(--m)}}
+.mean-bar .val{{font-size:1.1rem;font-weight:700;font-family:var(--m)}}
+.mean-bar .hist{{color:var(--accent)}}
+.mean-bar .claude{{color:var(--pos)}}
+.mean-bar .vs{{font-size:.7rem;color:var(--muted);font-family:var(--m)}}
+
 /* ── Significance card ── */
 .sig{{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border-left:4px solid var(--pos)}}
 .sig .p{{font-size:3rem;font-weight:800;font-family:var(--m);color:var(--pos)}}
@@ -255,43 +185,27 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   position:relative;height:100px;margin:2.5rem 0 .5rem;
   background:#fff;border-radius:6px;border:1px solid var(--bdr);
 }}
-/* Greyed-out outside-IQR regions */
 .outside{{
   position:absolute;top:0;bottom:0;
   background:rgba(0,0,0,.22);pointer-events:none;z-index:0;
 }}
-/* IQR green band */
 .iqr{{
   position:absolute;top:0;bottom:0;
   background:rgba(45,106,79,.22);
   border-left:4px solid var(--pos);border-right:4px solid var(--pos);
   pointer-events:none;z-index:0;
 }}
-/* "middle 50%" centered label inside the band */
 .iqr-center{{
   position:absolute;top:-18px;transform:translateX(-50%);
   font-size:.85rem;font-family:var(--m);font-weight:800;
   color:var(--pos);letter-spacing:.1em;text-transform:uppercase;opacity:.5;
   pointer-events:none;z-index:1;white-space:nowrap;
 }}
-/* Q1/Q3 boundary labels at the edges */
-.q-label{{
-  position:absolute;bottom:4px;transform:translateX(-50%);
-  pointer-events:none;z-index:4;text-align:center;
-}}
-.q-val{{
-  display:inline-block;font-size:.7rem;color:var(--pos);
-  font-family:var(--m);font-weight:800;
-  background:var(--bg);padding:2px 6px;
-  border:2px solid var(--pos);border-radius:4px;
-}}
-/* Median line */
 .med{{
   position:absolute;top:0;bottom:0;width:2px;
   background:var(--pos);opacity:.3;pointer-events:none;
   transform:translateX(-50%);z-index:0;
 }}
-/* Dots */
 .dot{{
   position:absolute;top:50%;transform:translate(-50%,-50%);
   border-radius:50%;cursor:help;z-index:1;opacity:.35;
@@ -300,7 +214,6 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   opacity:1;z-index:2;
   box-shadow:0 0 0 3px rgba(45,106,79,.3);
 }}
-/* Claude dot labels */
 .dot-tag{{
   position:absolute;top:calc(50% + 18px);transform:translateX(-50%);
   font-size:.7rem;font-family:var(--m);font-weight:800;
@@ -316,14 +229,6 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 .axis{{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--m);margin-top:4px}}
 .legend{{display:flex;gap:1.5rem;margin-top:.75rem;font-size:.85rem;color:var(--muted);flex-wrap:wrap}}
 .legend i{{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem;vertical-align:middle}}
-
-/* ── Time-series chart ── */
-.ts-chart{{width:100%;height:340px;margin:2rem 0 .5rem;background:#fff;border-radius:6px;border:1px solid var(--bdr);overflow:visible}}
-.ts-bar{{cursor:help}}
-.ts-label{{font-size:.65rem;font-family:var(--m);font-weight:700;fill:var(--pos);text-anchor:middle}}
-.ts-y-label{{font-size:.6rem;fill:var(--muted);font-family:var(--m);dominant-baseline:hanging}}
-.ts-x-label{{font-size:.55rem;fill:var(--muted);font-family:var(--m);text-anchor:end}}
-.ts-grid{{stroke:var(--bdr);stroke-width:.5;stroke-dasharray:4 3}}
 </style></head><body>
 
 <h1>Bugs per 10 Commits</h1>
@@ -349,6 +254,17 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   </span>
 </div>
 
+<h2>Claude Releases</h2>
+<div class="g">
+  {claude_cards}
+</div>
+<div class="mean-bar">
+  <span class="label">Claude mean:</span> <span class="val claude">{claude_mean:.2f}</span>
+  <span class="vs">vs</span>
+  <span class="label">Historical mean:</span> <span class="val hist">{hist_mean:.2f}</span>
+  <span class="vs">({'{:.1f}×'.format(claude_mean / hist_mean) if hist_mean > 0 else 'N/A'})</span>
+</div>
+
 <h2>Is This Chance?</h2>
 <div class="sig">
   <div class="p">p = {p_value:.2f}</div>
@@ -358,23 +274,9 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
     <strong>{n_extreme}</strong> out of <strong>{n_total}</strong> possible pairs meet that bar — not rare at all.
   </div>
   <div class="detail">
-    Claude mean Bugs/10c: {bug_claude_mean:.2f} · Historical mean: {bug_hist_mean:.2f} · Claude is {'lower' if bug_claude_mean < bug_hist_mean else 'higher'}<br/>
+    Claude mean Bugs/10c: {claude_mean:.2f} · Historical mean: {hist_mean:.2f} · Claude is {'lower' if claude_mean < hist_mean else 'higher'}<br/>
     {'<br/>'.join(f'{tag}: {rate:.2f} Bugs/10c — rank {rank}/{out_of} in historical distribution' for tag, rate, rank, out_of in claude_ranks)}
   </div>
-</div>
-
-<h2>Claude Releases</h2>
-<div class="g">
-  {claude_cards}
-</div>
-
-<h2>WtSec/10c Over Time</h2>
-<svg class="ts-chart" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet">
-  {ts_svg}
-</svg>
-<div class="legend">
-  <span><i style="background:#b44a1e;opacity:.5"></i> Historical</span>
-  <span><i style="background:#2d6a4f"></i> Claude</span>
 </div>
 
 <h2>All Releases (chronological)</h2>
