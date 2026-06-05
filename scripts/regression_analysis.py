@@ -949,15 +949,15 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 <h3>How Normal Are the Claude Releases?</h3>
 
 <div class="result-callout">
-  <div class="result-number">top {p_value * 100:.0f}%</div>
-  <div class="result-label">of all possible pairs score equal or worse</div>
+  <div class="result-number">{n_extreme} of {n_total}</div>
+  <div class="result-label">random pairs have mean ≥ Claude's {claude_mean:.2f}</div>
   <div class="result-detail">
-    If you pick any 2 releases at random, there's a <strong>{p_value:.0%}</strong> chance
-    they'll have a mean Bugs/10c at least as high as the two Claude releases.
-    Nearly half of all possible pairs score the same or worse — the Claude releases blend right into the middle of the historical distribution.
+    <strong>{p_value:.0%}</strong> of all possible pairs of 2 releases from the historical
+    distribution score the same or higher. The Claude mean sits in the middle of the
+    pack — not low, not high, just where most pairs land.
     <br><br>
     <span style="font-family:var(--mono);font-size:0.85rem">
-    {n_extreme} of {n_total} possible pairs have mean ≥ Claude's {claude_mean:.2f} · Historical mean: {hist_mean:.2f}
+    Claude mean: {claude_mean:.2f} · Historical mean: {hist_mean:.2f} · IQR: {q25:.2f}–{q75:.2f}
     </span>
   </div>
 </div>
