@@ -613,7 +613,7 @@ footer {
 
 <h2>1 · Background: The "rsync Outrage"</h2>
 
-<p>In late May 2026, rsync blew up. GitHub, Hacker News, Lobsters: hundreds of people arguing about two questions that have been tearing into each other for months. Can you ship AI-written code and call it reliable? And do open-source maintainers owe their users anything beyond the code they give away for free?</p>
+<p>In late May 2026, rsync blew up. GitHub, Hacker News, Lobsters: hundreds of people arguing about whether open-source maintainers can ship AI-written code and have it be reliable — and whether the people taking the code for free get to demand how it is made.</p>
 
 <p>On May 30, 2026, a GitHub issue titled <a href="https://github.com/RsyncProject/rsync/issues/929">"Please Do Not Vibe Fuck Up This Software"</a> was opened against the rsync repository. It attached a screenshot of a Mastodon post criticizing the project's use of Claude. No bug report. No technical content. What followed was extraordinary: <strong>329 comments and counting</strong>, ranging from thoughtful concern to outright harassment.</p>
 
@@ -634,7 +634,14 @@ footer {
   <figcaption>A user posting drawings depicting violence against the rsync maintainer, one of several threats that escalated the issue from heated debate to harassment.</figcaption>
 </figure>
 
-<p>It spread to <a href="https://news.ycombinator.com/item?id=48342705">Hacker News</a> and <a href="https://lobste.rs/s/k1b0za/rsync_outrage">Lobsters</a>, generating hundreds more comments. On Lobsters, user <code>boramalper</code> wrote:</p>
+<p>It spread to <a href="https://news.ycombinator.com/item?id=48342705">Hacker News</a> and <a href="https://lobste.rs/s/k1b0za/rsync_outrage">Lobsters</a>, generating hundreds more comments. The central claim, repeated everywhere: <span class="callout-inline">Claude-assisted development introduced bugs into a previously stable tool.</span></p>
+
+<blockquote class="ghost-quote">
+  <p>People are very justifiably angry that a <em>very stable, well trusted tool</em>, has started to immediately go downhill… <strong>all because the main dev is vibecoding that software.</strong></p>
+  <span class="attr">— fao_ on Hacker News</span>
+</blockquote>
+
+<p>On Lobsters, user <code>boramalper</code> wrote:</p>
 
 <blockquote class="ghost-quote">
   <p>It'd be interesting if someone actually did a timechart of regressions after each release (if at all possible) to see if the number actually went up recently or not.</p>
@@ -643,11 +650,7 @@ footer {
 
 <p>User <code>bitshift</code> replied: <em>"I would also love to see such a chart. It wouldn't be completely informative… But at least it would be something objective we could measure."</em></p>
 
-<p><strong>This analysis is that chart,</strong> stripped to its bones. No weighted regressions. No security-commit classification. No WLS model. Just one question: do the Claude releases look different from the historical distribution of all releases?</p>
-
-<p>The central claim of the critics is straightforward: <span class="callout-inline">Claude-assisted development introduced bugs into a previously stable tool.</span> On the HN thread, user <code>fao_</code> summarized the argument: <em>"People are very justifiably angry that a very stable, well trusted tool, has started to immediately go downhill… all because the main dev is vibecoding that software."</em></p>
-
-<p>Andrew Tridgell ("tridge"), rsync's lead developer, <a href="https://medium.com/@tridge60/rsync-and-outrage-d9849599e5a0">responded in a Medium post</a> with a different framing. He described a flood of security reports (many AI-generated themselves) that forced rapid, extensive changes to rsync's attack surface. A retired developer who would rather be sailing, he reached for Claude to help with the volume of work: writing test suites, adding defence-in-depth hardening, and working through the CVE backlog. He acknowledged the regressions in v3.4.3 but said he had deliberately prioritized security fixes over edge-case compatibility.</p>
+<p><strong>This analysis is that chart.</strong> Stripped to its bones. No weighted regressions. No security-commit classification. No WLS model. Just one question: do the Claude releases look different from the historical distribution of all releases?</p>
 
 <p>On the HN thread, user <code>zos_kia</code> pointed at the confound directly:</p>
 
@@ -659,13 +662,15 @@ footer {
 <p>On Lobsters, user <code>jbert</code> spelled out the causal chain:</p>
 
 <blockquote class="ghost-quote">
-  <p>The trigger for the increased volume of changes (and hence increased number of regressions) was the influx of (mostly) LLM-enabled security issues. i.e. the causal chain was: <span class="callout-inline">LLMs → more known security issues → more changes needed than usual → more regressions than usual.</span></p>
+   <p>The trigger for the increased volume of changes (and hence increased number of regressions) was the influx of (mostly) LLM-enabled security issues. i.e. the causal chain was: <span class="callout-inline">LLMs → more known security issues → more changes needed than usual → more regressions than usual.</span></p>
   <span class="attr">— jbert on Lobsters</span>
 </blockquote>
 
+<p>These users identified the exact confound: it wasn't AI writing the code that caused regressions. It was AI finding security holes that forced tridge to ship more changes than usual — and more changes means more regressions, regardless of who wrote them. This is not a Claude problem. It is a "more changes" problem. Tridge himself confirmed this causal chain in his response, describing how a flood of AI-generated CVE reports forced rapid, extensive changes to rsync's attack surface. A retired developer who would rather be sailing, he reached for Claude to help with the volume: writing test suites, adding defence-in-depth hardening, and working through the security backlog. He acknowledged the regressions in v3.4.3 but said he had deliberately prioritized security fixes over edge-case compatibility.</p>
+
 <div class="section-divider"></div>
 
-<p><strong>This document exists to answer one question with the simplest possible data:</strong> if you place the Claude releases in the distribution of all historical releases, do they stand out? No model. No covariates. Just the empirical distribution of bugs per commit across every release with data.</p>
+<p>No model. No covariates. Just the empirical distribution of bugs per commit across every release with data.</p>
 
 </section>
 
