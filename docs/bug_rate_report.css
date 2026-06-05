@@ -33,6 +33,7 @@ body { font-family: var(--sans); color: var(--fg); background: var(--bg); line-h
   justify-content: center;
   padding: 4rem 2rem;
   position: relative;
+  background: var(--bg-deep);
 }
 .hero-label {
   font-family: var(--mono);
@@ -390,7 +391,7 @@ footer {
   position: relative;
   height: 100px;
   margin: 2.5rem 0 0.5rem;
-  background: var(--bg);
+  background: var(--bg-deep);
   border-radius: 6px;
   border: 1px solid var(--border-light);
   overflow: hidden;
@@ -515,7 +516,7 @@ footer {
   margin: 1.5rem 0;
 }
 .c {
-  background: var(--bg);
+  background: var(--bg-deep);
   border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 1.25rem;
