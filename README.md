@@ -29,19 +29,16 @@ uv run python scripts/fetch_rsync_data.py
 # 2. Fetch Bugzilla bugs
 uv run python scripts/fetch_bugzilla_data.py
 
-# 3. Extract regression reports from mailing list
-uv run python scripts/fetch_mailinglist_data.py
-
-# 4. Extract all bug reports from mailing list
+# 3. Extract bug reports from mailing list
 uv run python scripts/fetch_mailinglist_bugs.py
 
-# 5. Fetch tags/releases and compute commit ranges
+# 4. Fetch tags/releases and compute commit ranges
 uv run python scripts/enrich_releases.py
 
-# 6. Build analytical views
+# 5. Build analytical views
 uv run python scripts/build_views.py
 
-# 7. Generate HTML report
+# 6. Generate HTML report
 uv run python scripts/regression_analysis.py
 ```
 

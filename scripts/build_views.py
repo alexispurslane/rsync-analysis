@@ -176,7 +176,7 @@ def rebuild_views(con: duckdb.DuckDBPyConnection) -> None:
             END AS tag_name,
             count(*) AS bug_count,
             'ml' AS source
-        FROM ml_regressions
+        FROM ml_bug_reports
         WHERE subject NOT LIKE 'DO NOT REPLY%'
         GROUP BY version
     """)

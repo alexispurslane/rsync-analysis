@@ -93,12 +93,12 @@
 <h2>2 · Executive Summary</h2>
 
 <ul class="findings-list">
-  <li><strong>41 releases with bug data,</strong> spanning v2.5.1 to v3.4.3</li>
+  <li><strong>46 releases with bug data,</strong> spanning v2.4.6 to v3.4.3</li>
   <li><strong>2 releases have Claude commits:</strong> v3.4.2 (9 Claude, 0.80 bugs/10c) and v3.4.3 (28 Claude, 6.76 bugs/10c)</li>
   <li><strong>Both fall inside the middle 50%</strong> of the historical distribution</li>
-  <li><strong>52% of random pairs</strong> of any 2 releases score equal or worse than the Claude releases</li>
-  <li><strong>The historical mean is 2× the Claude mean</strong> (8.10 vs 3.78 bugs/10c)</li>
-  <li><strong>No regime shift detected:</strong> runs test p=0.137, sequence is consistent with randomness</li>
+  <li><strong>46% of random pairs</strong> of any 2 releases score equal or worse than the Claude releases</li>
+  <li><strong>The historical mean is 2× the Claude mean</strong> (7.59 vs 3.78 bugs/10c)</li>
+  <li><strong>No regime shift detected:</strong> runs test p=0.123, sequence is consistent with randomness</li>
   <li><strong>v3.4.1 (102 bugs / 9 commits, no Claude)</strong> is an outlier but belongs in the baseline — it is a release, and the distribution already captures it</li>
 </ul>
 
@@ -147,21 +147,21 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 <h3>Claude Releases</h3>
 
 <div class="g">
-  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">30th percentile (rank 9 of 30)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">70th percentile (rank 21 of 30)</div></div>
+  <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31st percentile (rank 11 of 35)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div></div>
 </div>
 
 <h3>How Normal Are the Claude Releases?</h3>
 
 <div class="result-callout">
-  <div class="result-number">52%</div>
+  <div class="result-number">46%</div>
   <div class="result-label">of random pairs match or exceed the Claude mean</div>
   <div class="result-detail">
-    226 of 435 possible pairs of 2 historical releases have mean bugs/10c
+    271 of 595 possible pairs of 2 historical releases have mean bugs/10c
     ≥ 3.78. Nearly half. The Claude releases sit exactly where most pairs land —
     the middle of the distribution, not the tail.
     <br><br>
     <span style="font-family:var(--mono);font-size:0.85rem">
-    Claude mean: 3.78 · Historical mean: 8.10
+    Claude mean: 3.78 · Historical mean: 7.59
     </span>
   </div>
 </div>
@@ -171,38 +171,43 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 <p>Here is where these releases fall in the distribution of all prior releases:</p>
 
 <div class="strip">
-  <div class="outside" style="right:59.7%"></div>
-  <div class="outside" style="left:65.1%"></div>
-  <div class="iqr" style="left:40.3%;width:24.8%"></div>
-  <div class="iqr-center" style="left:52.7%">middle 50%</div>
-  <div class="med" style="left:49.2%"></div>
-  <div class="dot" style="left:32.5%;background:#b44a1e;width:11px;height:11px" title="v2.5.1: 0.29 bugs/10c"></div>
-  <div class="dot" style="left:23.5%;background:#b44a1e;width:11px;height:11px" title="v2.5.5: 0.11 bugs/10c"></div>
-  <div class="dot" style="left:19.4%;background:#b44a1e;width:11px;height:11px" title="v2.6.0: 0.07 bugs/10c"></div>
-  <div class="dot" style="left:14.5%;background:#b44a1e;width:11px;height:11px" title="v2.6.1: 0.05 bugs/10c"></div>
-  <div class="dot" style="left:67.2%;background:#b44a1e;width:11px;height:11px" title="v2.6.2: 10.59 bugs/10c"></div>
-  <div class="dot" style="left:45.2%;background:#b44a1e;width:11px;height:11px" title="v2.6.3: 1.08 bugs/10c"></div>
-  <div class="dot" style="left:32.9%;background:#b44a1e;width:11px;height:11px" title="v2.6.4: 0.30 bugs/10c"></div>
+  <div class="outside" style="right:59.8%"></div>
+  <div class="outside" style="left:63.0%"></div>
+  <div class="iqr" style="left:40.2%;width:22.7%"></div>
+  <div class="iqr-center" style="left:51.6%">middle 50%</div>
+  <div class="med" style="left:49.4%"></div>
+  <div class="dot" style="left:48.6%;background:#b44a1e;width:11px;height:11px" title="v2.4.6: 1.54 bugs/10c"></div>
+  <div class="dot" style="left:38.6%;background:#b44a1e;width:11px;height:11px" title="v2.5.0: 0.55 bugs/10c"></div>
+  <div class="dot" style="left:39.2%;background:#b44a1e;width:11px;height:11px" title="v2.5.1: 0.58 bugs/10c"></div>
+  <div class="dot" style="left:38.0%;background:#b44a1e;width:11px;height:11px" title="v2.5.2: 0.51 bugs/10c"></div>
+  <div class="dot" style="left:52.8%;background:#b44a1e;width:11px;height:11px" title="v2.5.4: 2.38 bugs/10c"></div>
+  <div class="dot" style="left:53.3%;background:#b44a1e;width:11px;height:11px" title="v2.5.5: 2.50 bugs/10c"></div>
+  <div class="dot" style="left:39.3%;background:#b44a1e;width:11px;height:11px" title="v2.5.6: 0.59 bugs/10c"></div>
+  <div class="dot" style="left:32.8%;background:#b44a1e;width:11px;height:11px" title="v2.6.0: 0.30 bugs/10c"></div>
+  <div class="dot" style="left:23.4%;background:#b44a1e;width:11px;height:11px" title="v2.6.1: 0.11 bugs/10c"></div>
+  <div class="dot" style="left:71.8%;background:#b44a1e;width:11px;height:11px" title="v2.6.2: 17.06 bugs/10c"></div>
+  <div class="dot" style="left:46.9%;background:#b44a1e;width:11px;height:11px" title="v2.6.3: 1.29 bugs/10c"></div>
+  <div class="dot" style="left:32.5%;background:#b44a1e;width:11px;height:11px" title="v2.6.4: 0.29 bugs/10c"></div>
   <div class="dot" style="left:45.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.5: 1.10 bugs/10c"></div>
   <div class="dot" style="left:30.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.7: 0.23 bugs/10c"></div>
-  <div class="dot" style="left:47.6%;background:#b44a1e;width:11px;height:11px" title="v2.6.8: 1.39 bugs/10c"></div>
-  <div class="dot" style="left:50.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.9: 1.84 bugs/10c"></div>
-  <div class="dot" style="left:39.6%;background:#b44a1e;width:11px;height:11px" title="v3.0.0: 0.61 bugs/10c"></div>
+  <div class="dot" style="left:49.4%;background:#b44a1e;width:11px;height:11px" title="v2.6.8: 1.67 bugs/10c"></div>
+  <div class="dot" style="left:51.3%;background:#b44a1e;width:11px;height:11px" title="v2.6.9: 2.03 bugs/10c"></div>
+  <div class="dot" style="left:41.1%;background:#b44a1e;width:11px;height:11px" title="v3.0.0: 0.70 bugs/10c"></div>
   <div class="dot" style="left:39.3%;background:#b44a1e;width:11px;height:11px" title="v3.0.1: 0.59 bugs/10c"></div>
-  <div class="dot" style="left:64.2%;background:#b44a1e;width:11px;height:11px" title="v3.0.2: 7.78 bugs/10c"></div>
-  <div class="dot" style="left:57.4%;background:#b44a1e;width:11px;height:11px" title="v3.0.3: 3.82 bugs/10c"></div>
-  <div class="dot" style="left:54.1%;background:#b44a1e;width:11px;height:11px" title="v3.1.0: 2.71 bugs/10c"></div>
-  <div class="dot" style="left:65.4%;background:#b44a1e;width:11px;height:11px" title="v3.1.1: 8.79 bugs/10c"></div>
-  <div class="dot" style="left:66.1%;background:#b44a1e;width:11px;height:11px" title="v3.1.2: 9.47 bugs/10c"></div>
-  <div class="dot" style="left:69.3%;background:#b44a1e;width:11px;height:11px" title="v3.1.3: 13.11 bugs/10c"></div>
+  <div class="dot" style="left:67.7%;background:#b44a1e;width:11px;height:11px" title="v3.0.2: 11.11 bugs/10c"></div>
+  <div class="dot" style="left:57.8%;background:#b44a1e;width:11px;height:11px" title="v3.0.3: 4.00 bugs/10c"></div>
+  <div class="dot" style="left:55.0%;background:#b44a1e;width:11px;height:11px" title="v3.1.0: 2.98 bugs/10c"></div>
+  <div class="dot" style="left:67.0%;background:#b44a1e;width:11px;height:11px" title="v3.1.1: 10.30 bugs/10c"></div>
+  <div class="dot" style="left:66.3%;background:#b44a1e;width:11px;height:11px" title="v3.1.2: 9.65 bugs/10c"></div>
+  <div class="dot" style="left:70.1%;background:#b44a1e;width:11px;height:11px" title="v3.1.3: 14.26 bugs/10c"></div>
   <div class="dot" style="left:42.2%;background:#b44a1e;width:11px;height:11px" title="v3.2.0: 0.79 bugs/10c"></div>
   <div class="dot" style="left:47.9%;background:#b44a1e;width:11px;height:11px" title="v3.2.1: 1.43 bugs/10c"></div>
-  <div class="dot" style="left:55.4%;background:#b44a1e;width:11px;height:11px" title="v3.2.2: 3.10 bugs/10c"></div>
-  <div class="dot" style="left:67.0%;background:#b44a1e;width:11px;height:11px" title="v3.2.3: 10.32 bugs/10c"></div>
+  <div class="dot" style="left:56.4%;background:#b44a1e;width:11px;height:11px" title="v3.2.2: 3.45 bugs/10c"></div>
+  <div class="dot" style="left:67.2%;background:#b44a1e;width:11px;height:11px" title="v3.2.3: 10.57 bugs/10c"></div>
   <div class="dot" style="left:47.4%;background:#b44a1e;width:11px;height:11px" title="v3.2.4: 1.36 bugs/10c"></div>
   <div class="dot" style="left:52.3%;background:#b44a1e;width:11px;height:11px" title="v3.2.5: 2.26 bugs/10c"></div>
   <div class="dot" style="left:57.6%;background:#b44a1e;width:11px;height:11px" title="v3.2.6: 3.93 bugs/10c"></div>
-  <div class="dot" style="left:74.1%;background:#b44a1e;width:11px;height:11px" title="v3.2.7: 21.50 bugs/10c"></div>
+  <div class="dot" style="left:74.0%;background:#b44a1e;width:11px;height:11px" title="v3.2.7: 21.33 bugs/10c"></div>
   <div class="dot" style="left:73.4%;background:#b44a1e;width:11px;height:11px" title="v3.3.0: 20.00 bugs/10c"></div>
   <div class="dot" style="left:44.4%;background:#b44a1e;width:11px;height:11px" title="v3.4.0: 1.00 bugs/10c"></div>
   <div class="dot" style="left:90.1%;background:#b44a1e;width:11px;height:11px" title="v3.4.1: 113.33 bugs/10c"></div>
@@ -228,7 +233,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 </div>
 <p class="iqr-explain">
   Each dot is a release. The <strong>shaded green band</strong> is the interquartile range (IQR) —
-  the middle 50% of historical releases, from <strong>0.65</strong> to <strong>8.54</strong> bugs/10c.
+  the middle 50% of historical releases, from <strong>0.65</strong> to <strong>6.82</strong> bugs/10c.
   Half of all historical releases fall inside this band, and half fall outside.
   The darker regions on either side are the lower and upper quarters.
   The Claude releases (green dots) <strong>both fall inside the IQR</strong> —
@@ -237,9 +242,9 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <h3>Regime Check</h3>
 
-<p>The historical mean is 8.10 bugs/10c, but this is driven by a bimodal distribution. v2.x releases average 1.55 bugs/10c; v3.x releases average 11.12. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 4th of 21 v3.x releases, v3.4.3 ranks 13th of 21 v3.x releases.</p>
+<p>The historical mean is 7.59 bugs/10c, but this is driven by a bimodal distribution. v2.x releases average 2.04 bugs/10c; v3.x releases average 11.46. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 4th of 21 v3.x releases, v3.4.3 ranks 13th of 21 v3.x releases.</p>
 
-<p>A runs test on the 30 non-Claude releases finds 12 runs (expected 16.0 under randomness, z=-1.49, <strong>p=0.137</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
+<p>A runs test on the 35 non-Claude releases finds 14 runs (expected 18.5 under randomness, z=-1.54, <strong>p=0.123</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
 
 <h3>The Outlier Nobody Noticed</h3>
 
@@ -264,38 +269,43 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <tr><th>Release</th><th>Bugs</th><th>Commits</th><th>Claude</th><th>Bugs/10c</th><th>Percentile</th></tr>
   </thead>
   <tbody>
-    <tr class=""><td class="rel">v2.5.1</td><td class="n">2</td><td class="n">69</td><td class="n">0</td><td class="n rate">0.29</td><td class="era">13th percentile</td></tr>
-          <tr class=""><td class="rel">v2.5.5</td><td class="n">1</td><td class="n">88</td><td class="n">0</td><td class="n rate">0.11</td><td class="era">7th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.0</td><td class="n">2</td><td class="n">267</td><td class="n">0</td><td class="n rate">0.07</td><td class="era">3rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.1</td><td class="n">2</td><td class="n">444</td><td class="n">0</td><td class="n rate">0.05</td><td class="era">0th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.2</td><td class="n">18</td><td class="n">17</td><td class="n">0</td><td class="n rate">10.59</td><td class="era">83rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.3</td><td class="n">41</td><td class="n">381</td><td class="n">0</td><td class="n rate">1.08</td><td class="era">33rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.4</td><td class="n">23</td><td class="n">760</td><td class="n">0</td><td class="n rate">0.30</td><td class="era">17th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.5</td><td class="n">16</td><td class="n">146</td><td class="n">0</td><td class="n rate">1.10</td><td class="era">37th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.7</td><td class="n">15</td><td class="n">649</td><td class="n">0</td><td class="n rate">0.23</td><td class="era">10th percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.8</td><td class="n">10</td><td class="n">72</td><td class="n">0</td><td class="n rate">1.39</td><td class="era">43rd percentile</td></tr>
-          <tr class=""><td class="rel">v2.6.9</td><td class="n">48</td><td class="n">261</td><td class="n">0</td><td class="n rate">1.84</td><td class="era">50th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.0</td><td class="n">55</td><td class="n">909</td><td class="n">0</td><td class="n rate">0.61</td><td class="era">23rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.1</td><td class="n">6</td><td class="n">102</td><td class="n">0</td><td class="n rate">0.59</td><td class="era">20th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.2</td><td class="n">7</td><td class="n">9</td><td class="n">0</td><td class="n rate">7.78</td><td class="era">70th percentile</td></tr>
-          <tr class=""><td class="rel">v3.0.3</td><td class="n">21</td><td class="n">55</td><td class="n">0</td><td class="n rate">3.82</td><td class="era">63rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.0</td><td class="n">155</td><td class="n">571</td><td class="n">0</td><td class="n rate">2.71</td><td class="era">57th percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.1</td><td class="n">58</td><td class="n">66</td><td class="n">0</td><td class="n rate">8.79</td><td class="era">73rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.2</td><td class="n">54</td><td class="n">57</td><td class="n">0</td><td class="n rate">9.47</td><td class="era">77th percentile</td></tr>
-          <tr class=""><td class="rel">v3.1.3</td><td class="n">80</td><td class="n">61</td><td class="n">0</td><td class="n rate">13.11</td><td class="era">87th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.0</td><td class="n">24</td><td class="n">304</td><td class="n">0</td><td class="n rate">0.79</td><td class="era">27th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.1</td><td class="n">9</td><td class="n">63</td><td class="n">0</td><td class="n rate">1.43</td><td class="era">47th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.2</td><td class="n">18</td><td class="n">58</td><td class="n">0</td><td class="n rate">3.10</td><td class="era">60th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.3</td><td class="n">162</td><td class="n">157</td><td class="n">0</td><td class="n rate">10.32</td><td class="era">80th percentile</td></tr>
+    <tr class=""><td class="rel">v2.4.6</td><td class="n">2</td><td class="n">13</td><td class="n">0</td><td class="n rate">1.54</td><td class="era">46th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.0</td><td class="n">4</td><td class="n">73</td><td class="n">0</td><td class="n rate">0.55</td><td class="era">14th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.1</td><td class="n">4</td><td class="n">69</td><td class="n">0</td><td class="n rate">0.58</td><td class="era">17th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.2</td><td class="n">6</td><td class="n">117</td><td class="n">0</td><td class="n rate">0.51</td><td class="era">11th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.4</td><td class="n">5</td><td class="n">21</td><td class="n">0</td><td class="n rate">2.38</td><td class="era">57th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.5</td><td class="n">22</td><td class="n">88</td><td class="n">0</td><td class="n rate">2.50</td><td class="era">60th percentile</td></tr>
+          <tr class=""><td class="rel">v2.5.6</td><td class="n">14</td><td class="n">239</td><td class="n">0</td><td class="n rate">0.59</td><td class="era">20th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.0</td><td class="n">8</td><td class="n">267</td><td class="n">0</td><td class="n rate">0.30</td><td class="era">9th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.1</td><td class="n">5</td><td class="n">444</td><td class="n">0</td><td class="n rate">0.11</td><td class="era">0th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.2</td><td class="n">29</td><td class="n">17</td><td class="n">0</td><td class="n rate">17.06</td><td class="era">89th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.3</td><td class="n">49</td><td class="n">381</td><td class="n">0</td><td class="n rate">1.29</td><td class="era">37th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.4</td><td class="n">22</td><td class="n">760</td><td class="n">0</td><td class="n rate">0.29</td><td class="era">6th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.5</td><td class="n">16</td><td class="n">146</td><td class="n">0</td><td class="n rate">1.10</td><td class="era">34th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.7</td><td class="n">15</td><td class="n">649</td><td class="n">0</td><td class="n rate">0.23</td><td class="era">3rd percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.8</td><td class="n">12</td><td class="n">72</td><td class="n">0</td><td class="n rate">1.67</td><td class="era">49th percentile</td></tr>
+          <tr class=""><td class="rel">v2.6.9</td><td class="n">53</td><td class="n">261</td><td class="n">0</td><td class="n rate">2.03</td><td class="era">51st percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.0</td><td class="n">64</td><td class="n">909</td><td class="n">0</td><td class="n rate">0.70</td><td class="era">26th percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.1</td><td class="n">6</td><td class="n">102</td><td class="n">0</td><td class="n rate">0.59</td><td class="era">23rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.2</td><td class="n">10</td><td class="n">9</td><td class="n">0</td><td class="n rate">11.11</td><td class="era">83rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.0.3</td><td class="n">22</td><td class="n">55</td><td class="n">0</td><td class="n rate">4.00</td><td class="era">71st percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.0</td><td class="n">170</td><td class="n">571</td><td class="n">0</td><td class="n rate">2.98</td><td class="era">63rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.1</td><td class="n">68</td><td class="n">66</td><td class="n">0</td><td class="n rate">10.30</td><td class="era">77th percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.2</td><td class="n">55</td><td class="n">57</td><td class="n">0</td><td class="n rate">9.65</td><td class="era">74th percentile</td></tr>
+          <tr class=""><td class="rel">v3.1.3</td><td class="n">87</td><td class="n">61</td><td class="n">0</td><td class="n rate">14.26</td><td class="era">86th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.0</td><td class="n">24</td><td class="n">304</td><td class="n">0</td><td class="n rate">0.79</td><td class="era">29th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.1</td><td class="n">9</td><td class="n">63</td><td class="n">0</td><td class="n rate">1.43</td><td class="era">43rd percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.2</td><td class="n">20</td><td class="n">58</td><td class="n">0</td><td class="n rate">3.45</td><td class="era">66th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.3</td><td class="n">166</td><td class="n">157</td><td class="n">0</td><td class="n rate">10.57</td><td class="era">80th percentile</td></tr>
           <tr class=""><td class="rel">v3.2.4</td><td class="n">29</td><td class="n">213</td><td class="n">0</td><td class="n rate">1.36</td><td class="era">40th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.5</td><td class="n">12</td><td class="n">53</td><td class="n">0</td><td class="n rate">2.26</td><td class="era">53rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.6</td><td class="n">11</td><td class="n">28</td><td class="n">0</td><td class="n rate">3.93</td><td class="era">67th percentile</td></tr>
-          <tr class=""><td class="rel">v3.2.7</td><td class="n">129</td><td class="n">60</td><td class="n">0</td><td class="n rate">21.50</td><td class="era">93rd percentile</td></tr>
-          <tr class=""><td class="rel">v3.3.0</td><td class="n">76</td><td class="n">38</td><td class="n">0</td><td class="n rate">20.00</td><td class="era">90th percentile</td></tr>
-          <tr class=""><td class="rel">v3.4.0</td><td class="n">6</td><td class="n">60</td><td class="n">0</td><td class="n rate">1.00</td><td class="era">30th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.5</td><td class="n">12</td><td class="n">53</td><td class="n">0</td><td class="n rate">2.26</td><td class="era">54th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.6</td><td class="n">11</td><td class="n">28</td><td class="n">0</td><td class="n rate">3.93</td><td class="era">69th percentile</td></tr>
+          <tr class=""><td class="rel">v3.2.7</td><td class="n">128</td><td class="n">60</td><td class="n">0</td><td class="n rate">21.33</td><td class="era">94th percentile</td></tr>
+          <tr class=""><td class="rel">v3.3.0</td><td class="n">76</td><td class="n">38</td><td class="n">0</td><td class="n rate">20.00</td><td class="era">91st percentile</td></tr>
+          <tr class=""><td class="rel">v3.4.0</td><td class="n">6</td><td class="n">60</td><td class="n">0</td><td class="n rate">1.00</td><td class="era">31st percentile</td></tr>
           <tr class=""><td class="rel">v3.4.1</td><td class="n">102</td><td class="n">9</td><td class="n">0</td><td class="n rate">113.33</td><td class="era">97th percentile</td></tr>
-          <tr class="claude-era"><td class="rel">v3.4.2</td><td class="n">4</td><td class="n">50</td><td class="n">9</td><td class="n rate">0.80</td><td class="era">30th percentile</td></tr>
-          <tr class="claude-era"><td class="rel">v3.4.3</td><td class="n">23</td><td class="n">34</td><td class="n">28</td><td class="n rate">6.76</td><td class="era">70th percentile</td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.2</td><td class="n">4</td><td class="n">50</td><td class="n">9</td><td class="n rate">0.80</td><td class="era">31st percentile</td></tr>
+          <tr class="claude-era"><td class="rel">v3.4.3</td><td class="n">23</td><td class="n">34</td><td class="n">28</td><td class="n rate">6.76</td><td class="era">74th percentile</td></tr>
           
   </tbody>
 </table>
@@ -317,7 +327,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict yes">✓</div>
     <div class="score-body">
       <div class="score-claim">"The Claude releases are statistically indistinguishable from historical releases"</div>
-      <div class="score-evidence">Both releases fall inside the middle 50% of the historical distribution. The permutation test shows <strong>52%</strong> of random pairs score equal or worse. There is no signal of abnormality.</div>
+      <div class="score-evidence">Both releases fall inside the middle 50% of the historical distribution. The permutation test shows <strong>46%</strong> of random pairs score equal or worse. There is no signal of abnormality.</div>
     </div>
   </div>
 
@@ -325,7 +335,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict yes">✓</div>
     <div class="score-body">
       <div class="score-claim">"The outrage selected on a single tail event and narrativized it"</div>
-      <div class="score-evidence">A Mastodon user noticed a regression in v3.4.3, saw Claude commits, and concluded causation. But v3.4.3 at 6.76 bugs/10c is at the 70th percentile — elevated but not extreme. 9 historical releases scored higher. The correlation is noise.</div>
+      <div class="score-evidence">A Mastodon user noticed a regression in v3.4.3, saw Claude commits, and concluded causation. But v3.4.3 at 6.76 bugs/10c is at the 74th percentile — elevated but not extreme. 9 historical releases scored higher. The correlation is noise.</div>
     </div>
   </div>
 
@@ -333,7 +343,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict weak">∓</div>
     <div class="score-body">
       <div class="score-claim">"Claude may have reduced the bug rate"</div>
-      <div class="score-evidence">The Claude mean (3.78) is half the historical mean (8.10). But with only 2 releases, this difference is not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude. It can tell us the direction: not harmful.</strong></div>
+      <div class="score-evidence">The Claude mean (3.78) is half the historical mean (7.59). But with only 2 releases, this difference is not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude. It can tell us the direction: not harmful.</strong></div>
     </div>
   </div>
 
