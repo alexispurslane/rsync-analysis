@@ -30,7 +30,7 @@ from pathlib import Path
 import duckdb
 
 ML_DIR = Path("/tmp/rsync-ml")
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "rsync_github.duckdb"
+DB_PATH = Path(__file__).resolve().parent / "rsync_github.duckdb"
 
 # ── Version matching ──
 VERSION_RE = re.compile(r'rsync[- ](\d+\.\d+(?:\.\d+)?)', re.I)

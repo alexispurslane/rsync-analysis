@@ -93,13 +93,13 @@
 <h2>2 · Executive Summary</h2>
 
 <ul class="findings-list">
-  <li><strong>37 releases with bug data,</strong> spanning v2.4.6 to v3.4.3</li>
-  <li><strong>2 releases have Claude commits:</strong> v3.4.2 (9 Claude, 0.80 bugs/10c) and v3.4.3 (28 Claude, 6.76 bugs/10c)</li>
+  <li><strong>$n_releases_with_bugs releases with bug data,</strong> spanning $first_release_tag to $last_release_tag</li>
+  <li><strong>$n_claude_releases releases have Claude commits:</strong> $claude_summary_line</li>
   <li><strong>Both fall inside the middle 50%</strong> of the historical distribution</li>
-  <li><strong>46% of random pairs</strong> of any 2 releases score equal or worse than the Claude releases</li>
-  <li><strong>The historical mean is 2× the Claude mean</strong> (7.60 vs 3.78 bugs/10c)</li>
-  <li><strong>No regime shift detected:</strong> runs test p=0.231, sequence is consistent with randomness</li>
-  <li><strong>v3.4.1 (102 bugs / 9 commits, no Claude)</strong> is an outlier but belongs in the baseline — it is a release, and the distribution already captures it</li>
+  <li><strong>$p_value_str of random pairs</strong> of any $n_claude_releases releases score equal or worse than the Claude releases</li>
+  <li><strong>The historical mean is $hist_claude_ratio_str the Claude mean</strong> ($hist_mean_str vs $claude_mean_str bugs/10c)</li>
+  <li><strong>No regime shift detected:</strong> runs test p=$p_runs_str, sequence is consistent with randomness</li>
+  <li><strong>$outlier_tag ($outlier_bugs bugs / $outlier_commits commits, no Claude)</strong> is an outlier but belongs in the baseline — it is a release, and the distribution already captures it</li>
 </ul>
 
 </section>
@@ -199,18 +199,18 @@ bugs/10c = (bug_count ÷ total_commits) × 10
 
 <h3>Regime Check</h3>
 
-<p>The historical mean is $hist_mean_str bugs/10c, but this is driven by a bimodal distribution. v2.x releases average $v2_mean_str bugs/10c; v3.x releases average $v3_mean_str. Even within v3.x, the Claude releases are unremarkable: v3.4.2 ranks 16th of 21 v3.x releases, v3.4.3 ranks 16th as well.</p>
+<p>The historical mean is $hist_mean_str bugs/10c, but this is driven by a bimodal distribution. v2.x releases average $v2_mean_str bugs/10c; v3.x releases average $v3_mean_str. Even within v3.x, the Claude releases are unremarkable: $claude_v3_ranks_str.</p>
 
 <p>A runs test on the $nc_count non-Claude releases finds $runs runs (expected $exp_runs_str under randomness, z=$z_runs_str, <strong>p=$p_runs_str</strong>). There is no evidence of temporal clustering — the sequence is consistent with a random draw from the same distribution.</p>
 
 <h3>The Outlier Nobody Noticed</h3>
 
 <div class="result-callout">
-  <div class="result-number">113.33</div>
-  <div class="result-label">bugs per 10 commits — v3.4.1, no Claude</div>
+  <div class="result-number">$outlier_rate_str</div>
+  <div class="result-label">bugs per 10 commits — $outlier_tag, no Claude</div>
   <div class="result-detail">
-    The highest bug rate in the entire dataset. 102 bugs in 9 commits, a hotfix release
-    the day after v3.4.0. It exceeds every other release by an order of magnitude.
+    The highest bug rate in the entire dataset. $outlier_bugs bugs in $outlier_commits commits, a hotfix release
+    the day after $outlier_prev_tag. It exceeds every other release by an order of magnitude.
     <strong>Nobody noticed.</strong> There was no AI to blame <strong>so</strong> there was no GitHub issue with
     300 comments, no death threats, no threats to fork or move to openrsync. A maintainer
     shipped a broken release and fixed it. This happens. The only thing that made v3.4.3
@@ -255,7 +255,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict yes">✓</div>
     <div class="score-body">
       <div class="score-claim">"The outrage selected on a single tail event and narrativized it"</div>
-      <div class="score-evidence">A Mastodon user noticed a regression in v3.4.3, saw Claude commits, and concluded causation. But v3.4.3 at 6.76 bugs/10c is at the 74th percentile — elevated but not extreme. Eleven historical releases scored higher. The correlation is noise.</div>
+      <div class="score-evidence">A Mastodon user noticed a regression in $claude_worst_tag, saw Claude commits, and concluded causation. But $claude_worst_tag at $claude_worst_rate_str bugs/10c is at the $claude_worst_pctile_str percentile — elevated but not extreme. $n_higher_than_worst_claude historical releases scored higher. The correlation is noise.</div>
     </div>
   </div>
 
@@ -263,7 +263,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict weak">∓</div>
     <div class="score-body">
       <div class="score-claim">"Claude may have reduced the bug rate"</div>
-      <div class="score-evidence">The Claude mean (3.78) is half the historical mean (7.60). But with only 2 releases, this difference is not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude. It can tell us the direction: not harmful.</strong></div>
+      <div class="score-evidence">The Claude mean ($claude_mean_str) is $hist_claude_ratio_desc_str the historical mean ($hist_mean_str). But with only $n_claude_releases releases, this difference is not statistically distinguishable from chance. <strong>The data cannot tell us the magnitude. It can tell us the direction: not harmful.</strong></div>
     </div>
   </div>
 
@@ -279,7 +279,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict no">✗</div>
     <div class="score-body">
       <div class="score-claim">"The regressions speak for themselves"</div>
-      <div class="score-evidence">v3.4.1 — a pre-Claude release — has the highest bug rate in the dataset (113.33 bugs/10c). Nobody noticed, because there was no AI to be angry at. The regressions only "speak" when you ignore the historical distribution.</div>
+      <div class="score-evidence">$outlier_tag — a pre-Claude release — has the highest bug rate in the dataset ($outlier_rate_str bugs/10c). Nobody noticed, because there was no AI to be angry at. The regressions only "speak" when you ignore the historical distribution.</div>
     </div>
   </div>
 
@@ -287,7 +287,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict no">✗</div>
     <div class="score-body">
       <div class="score-claim">"Just wait, more bugs will surface"</div>
-      <div class="score-evidence">v3.4.3 has been out long enough that its rate (6.76) is already comparable to historical releases. The "wait and see" argument is an appeal to an unknowable future that shifts the burden of proof away from the critics. If more bugs surface, they will enter the distribution like every other release. There is no reason to expect a regime break.</div>
+      <div class="score-evidence">$claude_worst_tag has been out long enough that its rate ($claude_worst_rate_str) is already comparable to historical releases. The "wait and see" argument is an appeal to an unknowable future that shifts the burden of proof away from the critics. If more bugs surface, they will enter the distribution like every other release. There is no reason to expect a regime break.</div>
     </div>
   </div>
 

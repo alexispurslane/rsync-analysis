@@ -19,7 +19,7 @@ from string import Template
 import duckdb
 import numpy as np
 
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "rsync_github.duckdb"
+DB_PATH = Path(__file__).resolve().parent / "rsync_github.duckdb"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "docs"
 
 # ── Data loading ──
@@ -189,6 +189,66 @@ def generate_report(releases: list[dict]) -> str:
     # Compute template variables
     claude_in_iqr = "both fall inside" if all(q25 <= r["bugs_10c"] <= q75 for r in claude) else "don't both fall inside"
 
+    # ── Outlier release (highest bug rate, no Claude) ──
+    non_claude_with_data = [r for r in with_data if not r["is_claude"]]
+    outlier = max(non_claude_with_data, key=lambda r: r["bugs_10c"])
+    all_sorted_tags = [r["tag"] for r in sorted_data]
+    outlier_idx = all_sorted_tags.index(outlier["tag"])
+    outlier_prev_tag = all_sorted_tags[outlier_idx - 1] if outlier_idx > 0 else "the prior release"
+
+    # ── Claude "worst" release (higher bug rate among Claude releases) ──
+    claude_worst = max(claude, key=lambda r: r["bugs_10c"])
+    claude_worst_rank = sum(1 for h in hist_rates if h <= claude_worst["bugs_10c"])
+    claude_worst_pctile = int(round(claude_worst_rank / len(hist_rates) * 100))
+    n_higher_than_worst = sum(1 for h in hist_rates if h > claude_worst["bugs_10c"])
+
+    # ── v3.x ranking of Claude releases ──
+    v3_with_data = sorted(
+        [r for r in with_data if r["tag"].startswith("v3.")],
+        key=lambda x: x["bugs_10c"],
+    )
+    parts = []
+    for i, cr in enumerate(sorted(claude, key=lambda x: x["tag"])):
+        v3_rank = sum(1 for r in v3_with_data if r["bugs_10c"] <= cr["bugs_10c"])
+        if i == len(claude) - 1 and len(claude) > 1:
+            prev_rank_str = parts[-1].split("ranks ")[1].split(" of ")[0]
+            if ordinal(v3_rank) == prev_rank_str:
+                parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} as well")
+            else:
+                parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} of {len(v3_with_data)} v3.x releases")
+        else:
+            parts.append(f"{cr['tag']} ranks {ordinal(v3_rank)} of {len(v3_with_data)} v3.x releases")
+    claude_v3_ranks_str = ", ".join(parts) if parts else ""
+
+    # ── Releases with bug data ──
+    releases_with_bugs = [r for r in releases if r["bugs"] > 0]
+    first_release_tag = releases_with_bugs[0]["tag"] if releases_with_bugs else ""
+    last_release_tag = releases_with_bugs[-1]["tag"] if releases_with_bugs else ""
+
+    # ── Claude summary line for executive summary ──
+    claude_summary_parts = [
+        f"{cr['tag']} ({cr['claude']} Claude, {cr['bugs_10c']:.2f} bugs/10c)"
+        for cr in sorted(claude, key=lambda x: x["tag"])
+    ]
+    claude_summary_line = " and ".join(claude_summary_parts)
+
+    # ── Historical vs Claude mean ratio ──
+    if claude_mean > 0:
+        hist_claude_ratio = hist_mean / claude_mean
+        if abs(hist_claude_ratio - round(hist_claude_ratio)) < 0.15:
+            hist_claude_ratio_str = f"{round(hist_claude_ratio):d}\u00d7"
+        else:
+            hist_claude_ratio_str = f"{hist_claude_ratio:.1f}\u00d7"
+        if 1.5 <= hist_claude_ratio < 2.5:
+            hist_claude_ratio_desc_str = "half"
+        elif hist_claude_ratio < 1.5:
+            hist_claude_ratio_desc_str = "close to"
+        else:
+            hist_claude_ratio_desc_str = f"{1/hist_claude_ratio:.0%} of"
+    else:
+        hist_claude_ratio_str = "\u221e\u00d7"
+        hist_claude_ratio_desc_str = "infinitely higher than"
+
     html = template.substitute(
         claude_cards=claude_cards,
         claude_mean_str=f"{claude_mean:.2f}",
@@ -208,6 +268,25 @@ def generate_report(releases: list[dict]) -> str:
         z_runs_str=f"{z_runs:.2f}",
         p_runs_str=f"{p_runs:.3f}",
         table_rows=table_rows,
+        # New dynamic template variables
+        n_releases_with_bugs=len(releases_with_bugs),
+        first_release_tag=first_release_tag,
+        last_release_tag=last_release_tag,
+        n_claude_releases=len(claude),
+        claude_summary_line=claude_summary_line,
+        hist_claude_ratio_str=hist_claude_ratio_str,
+        hist_claude_ratio_desc_str=hist_claude_ratio_desc_str,
+        outlier_tag=outlier["tag"],
+        outlier_rate_str=f"{outlier['bugs_10c']:.2f}",
+        outlier_bugs=outlier["bugs"],
+        outlier_commits=outlier["commits"],
+        outlier_prev_tag=outlier_prev_tag,
+        claude_worst_tag=claude_worst["tag"],
+        claude_worst_rate_str=f"{claude_worst['bugs_10c']:.2f}",
+        claude_worst_pctile=claude_worst_pctile,
+        claude_worst_pctile_str=ordinal(claude_worst_pctile),
+        n_higher_than_worst_claude=n_higher_than_worst,
+        claude_v3_ranks_str=claude_v3_ranks_str,
     )
 
     return html
