@@ -166,8 +166,7 @@ def generate_report(releases: list[dict]) -> str:
     table_rows = ""
     for r in sorted_data:
         is_c = r["is_claude"]
-        pctile_int = int(round(r["percentile"]))
-        pctile = f'{ordinal(pctile_int)} percentile' if is_c else ""
+        pctile = f'{ordinal(int(round(r["percentile"])))} percentile' if is_c else ""
         table_rows += (
             f'<tr class="{"claude-era" if is_c else ""}">'
             f'<td class="rel">{r["tag"]}</td>'
@@ -206,6 +205,8 @@ def generate_report(releases: list[dict]) -> str:
         p_runs_str=f"{p_runs:.3f}",
         table_rows=table_rows,
     )
+
+    return html
 
 def main() -> None:
     con = duckdb.connect(str(DB_PATH), read_only=True)
