@@ -13,6 +13,7 @@ Styling follows the warm editorial aesthetic from the detailed report.
 """
 
 from itertools import combinations
+import sys
 from pathlib import Path
 from string import Template
 
@@ -20,21 +21,65 @@ import duckdb
 import numpy as np
 from scipy.stats import fisher_exact
 
+# Allow importing severity_scoring from scripts/
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from severity_rubric import build_rubric_html, SEVERITY_RUBRIC, SEVERITY_RULES
+
 DB_PATH = Path(__file__).resolve().parent / "rsync_github.duckdb"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "docs"
 
 # ── Data loading ──
 
-def load_data(con: duckdb.DuckDBPyConnection) -> list[dict]:
-    rows = con.execute("""
-        SELECT tag_name, bug_count, total_commits, wt_sec, claude_commits
-        FROM release_table
-        WHERE tag_name NOT LIKE 'mbp%'
-        ORDER BY tag_name
-    """).fetchall()
+def load_data(con: duckdb.DuckDBPyConnection, filter_nonbugs: bool = False) -> list[dict]:
+    if filter_nonbugs:
+        # Re-count bugs excluding severity=0 (LLM-judged non-bugs).
+        # Track github_total_filed so we can distinguish "all were non-bugs" from "no data".
+        rows = con.execute("""
+            WITH github_real AS (
+                SELECT a.attributed_release AS tag_name,
+                       COUNT(*) FILTER (WHERE b.severity IS NULL OR b.severity > 0) AS real_bugs,
+                       COUNT(*) AS total_filed
+                FROM bug_release_attribution a
+                JOIN bugs b ON a.bug_number = b.number
+                GROUP BY a.attributed_release
+            ),
+            filtered_bugs AS (
+                SELECT tag_name,
+                       SUM(CASE
+                           WHEN source = 'github' THEN real_bugs
+                           ELSE bug_count
+                       END) AS bug_count,
+                       MAX(CASE WHEN source = 'github' THEN total_filed ELSE 0 END) AS github_filed
+                FROM (
+                    SELECT tag_name, real_bugs AS bug_count, real_bugs, total_filed, 'github' AS source
+                    FROM github_real
+                    UNION ALL
+                    SELECT tag_name, bug_count, NULL, 0, 'other' AS source
+                    FROM release_bugs
+                    WHERE source != 'github'
+                )
+                GROUP BY tag_name
+            )
+            SELECT rc.tag_name,
+                   COALESCE(fb.bug_count, 0),
+                   rc.total_commits, rc.wt_sec, rc.claude_commits,
+                   COALESCE(fb.github_filed, 0) AS github_total_filed
+            FROM release_commits rc
+            LEFT JOIN filtered_bugs fb ON rc.tag_name = fb.tag_name
+            WHERE rc.tag_name NOT LIKE 'mbp%'
+            ORDER BY rc.tag_name
+        """).fetchall()
+    else:
+        rows = con.execute("""
+            SELECT tag_name, bug_count, total_commits, wt_sec, claude_commits,
+                   0 AS github_total_filed
+            FROM release_table
+            WHERE tag_name NOT LIKE 'mbp%'
+            ORDER BY tag_name
+        """).fetchall()
     return [dict(zip(
-        ["tag", "bugs", "commits", "wt_sec", "claude", "is_claude"],
-        [r[0], r[1], r[2], float(r[3]), r[4], r[4] > 0]
+        ["tag", "bugs", "commits", "wt_sec", "claude", "is_claude", "github_total_filed"],
+        [r[0], r[1], r[2], float(r[3]), r[4], r[4] > 0, r[5]]
     )) for r in rows]
 
 # ── Stats helpers ──
@@ -55,8 +100,16 @@ def log_pct(rate: float) -> float:
 
 # ── HTML generation ──
 
-def generate_report(releases: list[dict]) -> str:
-    with_data = [r for r in releases if r["bugs"] > 0 and r["commits"] > 0]
+def generate_report(releases: list[dict], severity_examples: str = "") -> str:
+    # Inclusion logic:
+    #   - Always include GitHub-era releases (v3.2.0+) that have commits —
+    #     if they have 0 bugs that's signal, not missing data.
+    #   - Pre-GitHub releases: only include if they have bugs > 0 —
+    #     if bugs=0 that means we lack data, not that there were none.
+    github_era = {r["tag"] for r in releases
+                   if r["commits"] > 0 and r["tag"].startswith("v3.")
+                   and not r["tag"].startswith("v3.0") and not r["tag"].startswith("v3.1.")}
+    with_data = [r for r in releases if r["commits"] > 0 and (r["bugs"] > 0 or r["tag"] in github_era)]
     for r in with_data:
         r["bugs_10c"] = r["bugs"] * 10 / r["commits"]
 
@@ -283,6 +336,8 @@ def generate_report(releases: list[dict]) -> str:
         hist_claude_ratio_desc_str = "infinitely higher than"
 
     html = template.substitute(
+        severity_rubric_table=build_rubric_html(),
+        severity_examples=severity_examples,
         claude_cards=claude_cards,
         claude_mean_str=f"{claude_mean:.2f}",
         hist_mean_str=f"{hist_mean:.2f}",
@@ -332,21 +387,59 @@ def generate_report(releases: list[dict]) -> str:
 
     return html
 
+def build_severity_examples(con: duckdb.DuckDBPyConnection) -> str:
+    """Build example scoring rows from the DB, one from each rubric tier."""
+    # Pick one illustrative example per severity band, preferring Claude releases
+    examples = []
+    targets = [(95, 100), (75, 89), (55, 69), (35, 49), (15, 29), (0, 0)]
+    for target_lo, target_hi in targets:
+        row = con.execute("""
+            SELECT b.number, b.title, b.severity, a.attributed_release, b.url
+            FROM bugs b
+            JOIN bug_release_attribution a ON b.number = a.bug_number
+            WHERE b.severity IS NOT NULL AND b.severity BETWEEN ? AND ?
+            ORDER BY CASE WHEN b.severity = ? THEN 0 ELSE 1 END, b.number DESC
+            LIMIT 1
+        """, [target_lo, target_hi, target_lo]).fetchone()
+        if row:
+            examples.append(row)
+    rows_html = []
+    for r in examples:
+        rows_html.append(
+            f'<tr>'
+            f'<td class="rubric-range">{r[2]}</td>'
+            f'<td><a href="{r[4]}">{r[3]}</a></td>'
+            f'<td>{r[1][:100]}</td>'
+            f'</tr>'
+        )
+    header = '<tr><th>Score</th><th>Release</th><th>Title</th></tr>'
+    return f'<table class="rubric-table scoring-examples">\n<thead>{header}</thead>\n<tbody>{"".join(rows_html)}</tbody>\n</table>'
+
+
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate rsync bug-rate analysis report")
+    parser.add_argument("--unfiltered", action="store_true",
+                        help="Include bugs scored severity=0 by the LLM (feature requests, spam, etc.)")
+    args = parser.parse_args()
+    filter_nonbugs = not args.unfiltered
+
     con = duckdb.connect(str(DB_PATH), read_only=True)
-    releases = load_data(con)
+    releases = load_data(con, filter_nonbugs=filter_nonbugs)
+    severity_examples = build_severity_examples(con)
     con.close()
 
-    html = generate_report(releases)
+    html = generate_report(releases, severity_examples=severity_examples)
     OUTPUT_DIR.mkdir(exist_ok=True)
-    (OUTPUT_DIR / "index.html").write_text(html)
 
-    # Copy CSS to output dir (same location as index.html for relative ref)
+    out_name = "index.html" if filter_nonbugs else "index_unfiltered.html"
+    (OUTPUT_DIR / out_name).write_text(html)
+    print(f"Written to {OUTPUT_DIR / out_name}")
+
+    # Copy CSS to output dir
     css_src = Path(__file__).resolve().parent / "bug_rate_report.css"
     css_dst = OUTPUT_DIR / "bug_rate_report.css"
     css_dst.write_text(css_src.read_text())
-
-    print(f"Written to {OUTPUT_DIR / 'index.html'}")
 
 
 if __name__ == "__main__":

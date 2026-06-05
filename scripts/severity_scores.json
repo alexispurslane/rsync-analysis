@@ -1,0 +1,20 @@
+{
+  "github:7": {
+    "source": "github",
+    "id": "7",
+    "title": "Stats may be wrongly computed",
+    "severity": 35
+  },
+  "github:8": {
+    "source": "github",
+    "id": "8",
+    "title": "Sender waits for IO timeout instead of exiting",
+    "severity": 75
+  },
+  "github:11": {
+    "source": "github",
+    "id": "11",
+    "title": "FreeBSD help-from-md issue",
+    "severity": 75
+  }
+}

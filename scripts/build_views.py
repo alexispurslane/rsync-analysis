@@ -13,7 +13,7 @@ Core methodology: one row per release, five columns:
 Bug counting rules:
   - Bugzilla: all bugs with version field match, excluding
     DUPLICATE/INVALID/WONTFIX/WORKSFORME (not real bugs)
-  - GitHub:   all issues attributed to the release by filing date
+  - GitHub:   all bugs attributed to the release by filing date
   - ML:       all bug reports (strict-filtered by fetch_mailinglist_bugs.py)
   - Sources are summed; overlap between GitHub and Bugzilla is small
     (v3.1.3, v3.2.0) and counts from both are included since they
@@ -81,25 +81,25 @@ def rebuild_views(con: duckdb.DuckDBPyConnection) -> None:
         FROM commits AS c
     """)
 
-    # ── 2. issue_release_attribution ──
-    con.execute("DROP VIEW IF EXISTS issue_release_attribution")
+    # ── 2. bug_release_attribution ──
+    con.execute("DROP VIEW IF EXISTS bug_release_attribution")
     con.execute("""
-        CREATE VIEW issue_release_attribution AS
+        CREATE VIEW bug_release_attribution AS
         SELECT
-            i.number AS issue_number,
-            i.title AS issue_title,
-            i.created_at,
-            i.labels,
+            b.number AS bug_number,
+            b.title AS bug_title,
+            b.created_at,
+            b.labels,
             (
                 SELECT tr.tag_name
                 FROM tag_ranges AS tr
                 WHERE tr.tag_name NOT LIKE '%pre%'
                   AND tr.tag_name NOT LIKE '%rc%'
-                  AND tr.tag_commit_date <= i.created_at
+                  AND tr.tag_commit_date <= b.created_at
                 ORDER BY tr.tag_commit_date DESC
                 LIMIT 1
             ) AS attributed_release
-        FROM issues AS i
+        FROM bugs AS b
     """)
 
     # ── 3. release_commits ──
@@ -151,7 +151,7 @@ def rebuild_views(con: duckdb.DuckDBPyConnection) -> None:
             attributed_release AS tag_name,
             count(*) AS bug_count,
             'github' AS source
-        FROM issue_release_attribution
+        FROM bug_release_attribution
         GROUP BY attributed_release
 
         UNION ALL

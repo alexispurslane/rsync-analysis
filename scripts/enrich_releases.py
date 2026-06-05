@@ -264,63 +264,6 @@ def main():
     tc_count = con.execute("SELECT COUNT(*) FROM tag_commits").fetchone()[0]
     print(f"  Inserted {tc_count:,} rows into tag_commits (tag↔commit links)", flush=True)
 
-    # ── Create tag_prs view: tags ↔ PRs included ──
-    # A PR is included in a tag's range if its merge_commit_sha is in tag_commits for that tag
-    con.execute("""
-        CREATE OR REPLACE VIEW tag_prs AS
-        SELECT 
-            tc.tag_name,
-            pr.number as pr_number,
-            pr.title,
-            pr.user_login,
-            pr.merged_at,
-            pr.merged_by_login,
-            c.author_login as merge_commit_author,
-            c.author_date as merge_commit_date,
-            pr.additions,
-            pr.deletions,
-            pr.changed_files
-        FROM tag_commits tc
-        JOIN pull_requests pr ON tc.sha = pr.merge_commit_sha
-        JOIN commits c ON tc.sha = c.sha
-    """)
-
-    tag_pr_count = con.execute("SELECT COUNT(*) FROM tag_prs").fetchone()[0]
-    print(f"  tag_prs view: {tag_pr_count} PR↔tag links", flush=True)
-
-    # ── Create tag_summary view: aggregate stats per tag ──
-    con.execute("""
-        CREATE OR REPLACE VIEW tag_summary AS
-        SELECT 
-            t.name as tag_name,
-            t.target_sha,
-            t.url,
-            r.published_at,
-            r.prerelease,
-            tr.prev_tag_name,
-            tr.prev_tag_date,
-            tr.tag_commit_date,
-            (SELECT COUNT(*) FROM tag_commits tc WHERE tc.tag_name = t.name) as commit_count,
-            (SELECT COUNT(*) FROM tag_prs tp WHERE tp.tag_name = t.name) as pr_count,
-            (SELECT COUNT(DISTINCT c.author_login) 
-             FROM tag_commits tc 
-             JOIN commits c ON tc.sha = c.sha 
-             WHERE tc.tag_name = t.name AND c.author_login IS NOT NULL
-            ) as distinct_authors,
-            (SELECT SUM(c_add.additions) 
-             FROM tag_prs c_add 
-             WHERE c_add.tag_name = t.name
-            ) as total_additions,
-            (SELECT SUM(c_del.deletions) 
-             FROM tag_prs c_del 
-             WHERE c_del.tag_name = t.name
-            ) as total_deletions
-        FROM tags t
-        LEFT JOIN releases r ON t.name = r.tag_name
-        LEFT JOIN tag_ranges tr ON t.name = tr.tag_name
-        ORDER BY tr.tag_ordinal
-    """)
-
     # ── Create indices ──
     try:
         con.execute("CREATE INDEX idx_tag_commits_tag ON tag_commits(tag_name)")
@@ -335,25 +278,16 @@ def main():
     print("\n--- Verification ---", flush=True)
     con = duckdb.connect(str(DB_PATH))
 
-    print("\nTags matched to commits:")
+    print("\nTags with commit counts:")
     for row in con.execute("""
-        SELECT tag_name, prev_tag_name, prev_tag_date, tag_commit_date,
-               commit_count, pr_count, distinct_authors
-        FROM tag_summary
-        ORDER BY tag_commit_date DESC
+        SELECT tr.tag_name, tr.prev_tag_name, tr.tag_commit_date,
+               (SELECT COUNT(*) FROM tag_commits tc WHERE tc.tag_name = tr.tag_name) as commit_count
+        FROM tag_ranges tr
+        ORDER BY tr.tag_commit_date DESC
         LIMIT 15
     """).fetchall():
         prev = f"({row[1]})" if row[1] else "(initial)"
-        print(f"  {row[0]:20s} {prev:20s} {str(row[4]):>5} commits  {row[5]:>3} PRs  {row[6]:>3} authors  {str(row[3])[:10]}")
-
-    print("\nPRs per release (recent tags with PRs):")
-    for row in con.execute("""
-        SELECT tag_name, pr_number, title, user_login, merged_at
-        FROM tag_prs
-        ORDER BY merged_at DESC
-        LIMIT 10
-    """).fetchall():
-        print(f"  {row[0]:20s} PR #{row[1]:>4} by {row[3]:15s}  {row[2][:45]}")
+        print(f"  {row[0]:20s} {prev:20s} {row[3]:>5} commits  {str(row[2])[:10]}")
 
     con.close()
     print("\nDone!", flush=True)
