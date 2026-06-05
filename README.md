@@ -7,7 +7,6 @@ Reproduction pipeline for the rsync Claude bug-rate analysis. Fetches data from 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) (or pip)
 - [`gh`](https://cli.github.com/) CLI, authenticated (`gh auth login`)
-- The rsync mailing list archives extracted to `/tmp/rsync-ml/` (`.txt` files)
 - (Optional) Bugzilla CSV at `/tmp/bugzilla_rsync_all.csv` — otherwise fetched live
 
 ## Setup
@@ -21,6 +20,9 @@ uv sync
 Scripts must run in order — each populates a shared DuckDB database that the next script reads from.
 
 ```bash
+# 0. Download mailing list archives (~300 monthly files from lists.samba.org)
+uv run python scripts/fetch_mailinglist_archives.py
+
 # 1. Fetch GitHub data (commits, PRs, issues, reviews, comments)
 uv run python scripts/fetch_rsync_data.py
 
