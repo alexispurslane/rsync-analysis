@@ -186,13 +186,15 @@
             <li><strong>$n_releases_with_bugs releases with bug data,</strong> spanning $first_release_tag to
                 $last_release_tag</li>
             <li><strong>$n_claude_releases releases have Claude commits:</strong> $claude_summary_line</li>
-            <li><strong>Both fall inside the middle 50%</strong> of the historical distribution</li>
-            <li><strong>Exact permutation test p-value = $p_value_str:</strong> if you pick any
-                $n_claude_releases releases at random, you'd score as bad or worse $p_value_str of the time</li>
+            <li>$claude_iqr_summary</li>
+            <li><strong>Exact permutation test p-value = $p_value_str:</strong> pick any
+                $n_claude_releases releases at random, you'd score as bad or worse $p_value_str of the time.
+                This is the strongest available test and it finds nothing.</li>
+            <li><strong>Fisher's exact test p-value = $fisher_p_str:</strong> Claude releases are
+                no more likely to fall above the historical median than any other releases
+                (odds ratio $fisher_oddsratio_str).</li>
             <li><strong>The historical mean is $hist_claude_ratio_str the Claude mean</strong> ($hist_mean_str vs
-                $claude_mean_str bugs/10c)</li>
-            <li><strong>No regime shift detected:</strong> runs test p=$p_runs_str, sequence is consistent with
-                randomness</li>
+                $claude_mean_str sev/10c)</li>
             <li><strong>$outlier_tag ($outlier_bugs bugs / $outlier_commits commits, no Claude)</strong> is an outlier
                 but belongs in the baseline — it is a release, and the distribution already captures it</li>
         </ul>
@@ -207,12 +209,13 @@
 
         <h2>3 · The Metric</h2>
 
-        <p>The analysis uses a single metric: <strong>bugs per 10 commits</strong> (bugs/10c). For each release, divide
-            the number of bugs attributed to it by the number of commits in its range, then multiply by 10. This
-            normalizes for release size.</p>
+        <p>The analysis uses a single metric: <strong>severity-weighted bugs per 10 commits</strong> (sev/10c).
+            Each bug is normalized to a 0–1 severity score (its LLM-assigned severity divided by 100), and those
+            scores are summed per release instead of simply counting bugs. The raw bug count is also shown in the
+            table for reference, but sev/10c drives all statistical tests.</p>
 
         <div class="formula">
-            bugs/10c = (bug_count ÷ total_commits) × 10
+            sev/10c = (Σ severity/100 ÷ total_commits) × 10
         </div>
 
         <h3>How commits are assigned to releases</h3>
@@ -348,11 +351,11 @@
             </div>
             <div class="result-detail">
                 $n_extreme of $n_total possible groups of $n_claude_releases historical releases have mean
-                bugs/10c ≥ $claude_mean_str. Nearly half. The Claude releases sit right in the middle of the
+                sev/10c ≥ $claude_mean_str. Nearly half. The Claude releases sit right in the middle of the
                 permutation distribution — there is nothing extreme about them.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
-                    Test statistic: mean bugs/10c per group · Claude group mean: $claude_mean_str · Historical mean:
+                    Test statistic: mean sev/10c per group · Claude group mean: $claude_mean_str · Historical mean:
                     $hist_mean_str
                 </span>
             </div>
@@ -400,13 +403,13 @@
             <div class="result-label">one-sided p-value (H&#8321;: Claude more likely above median)</div>
             <div class="result-detail">
                 Fisher's exact test asks: if we split all releases at the historical median
-                ($fisher_median_str bugs/10c), are Claude releases significantly more likely to
+                ($fisher_median_str sev/10c), are Claude releases significantly more likely to
                 land above it? With a p-value of $fisher_p_str, the answer is a decisive no.
                 The odds ratio is $fisher_oddsratio_str &mdash; essentially 1:1. Claude releases are
                 no more likely to be above the median than any other releases.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
-                    Odds ratio: $fisher_oddsratio_str &middot; Median: $fisher_median_str bugs/10c
+                    Odds ratio: $fisher_oddsratio_str &middot; Median: $fisher_median_str sev/10c
                 </span>
             </div>
         </div>
@@ -440,15 +443,15 @@
         <p>
             <b>How to read this graph:</b> Each dot is a release. The <strong>shaded green band</strong> is the
             <a href="https://en.wikipedia.org/wiki/Interquartile_range">interquartile range</a> —
-            the middle 50% of historical releases, from <strong>$q25_str</strong> to <strong>$q75_str</strong> bugs/10c.
+            the middle 50% of historical releases, from <strong>$q25_str</strong> to <strong>$q75_str</strong> sev/10c.
             The darker regions on either side are the lower and upper quarters.
         </p>
 
         <p>
             This is another way of saying the same thing the previous two tests said, but more
-            intuitively: that the Claude releases (green dots) <strong>$claude_in_iqr the IQR</strong> —
-            their bug rates fall within the typical historical range. (Check the numbers if you don't
-            believe the graph.)
+            intuitively: the Claude releases (green dots) <strong>$claude_in_iqr</strong>. v3.4.2, with zero real
+            bugs, sits just below the IQR; v3.4.3 sits just above it. They bracket the middle of the distribution
+            in opposite directions. Neither is an outlier.
         </p>
 
         <h3>Regime Check</h3>
@@ -458,8 +461,8 @@
             releases to the full historical distribution is masking the fact that they're actually outliers for their
             regime. Luckily, there's a way to test this statistically.</p>
 
-        <p>Yes, the historical mean ($hist_mean_str bugs/10c) was driven by a bimodal distribution: v2.x releases
-            average $v2_mean_str bugs/10c; v3.x releases average $v3_mean_str. But even within the v3.x regime,
+        <p>Yes, the historical mean ($hist_mean_str sev/10c) was driven by a bimodal distribution: v2.x releases
+            average $v2_mean_str sev/10c; v3.x releases average $v3_mean_str. But even within the v3.x regime,
             the Claude releases sit in the middle of the pack or better:</p>
 
         <div class="strip">
@@ -481,7 +484,7 @@
         <br>
 
         <p>So the regime-shift argument doesn't just fail — it fails <em>backwards</em>. The v3.x era has a
-            much <i>higher</i> mean bugs/10c than v2.x. If you restrict the comparison to v3.x only, Claude releases
+            much <i>higher</i> mean sev/10c than v2.x. If you restrict the comparison to v3.x only, Claude releases
             don't stand out at all — and one of them is <em>better</em> than most. The only way to make Claude look
             like an outlier is to compare it against a <i>quieter</i> era and then blame the shift on Claude, when
             the data says the shift predates Claude entirely.</p>
@@ -489,16 +492,18 @@
         <p>We can further test whether there are meaningfully different regimes in the version history, and thus
             whether using the full historical data is valid, by doing a
             <a href="https://en.wikipedia.org/wiki/Wald%E2%80%93Wolfowitz_runs_test">runs test</a>.
-            If such regimes existed, the runs test would detect non-random clustering — it doesn't:</p>
+            If such regimes existed, the runs test would detect non-random clustering:</p>
 
         <div class="result-callout">
             <div class="result-number">p=$p_runs_str</div>
             <div class="result-label">Wald–Wolfowitz runs test on $nc_count non-Claude releases</div>
             <div class="result-detail">
                 $runs runs observed (expected $exp_runs_str under randomness, z=$z_runs_str).
-                There is no evidence of temporal clustering — the sequence is consistent with a
-                random draw from the same distribution throughout. Using the full historical baseline
-                is valid.
+                At p=$p_runs_str this is marginal — not strong enough to reject randomness at the conventional
+                0.05 level, but close enough that it warrants the v3.x-only comparison above, which
+                already accounts for the v2.x/v3.x difference. Using the full historical baseline
+                is a conservative choice: it includes a noisier era, which makes it harder, not easier,
+                to show that Claude releases are normal.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
                     Observed runs: $runs · Expected: $exp_runs_str · z=$z_runs_str
@@ -540,6 +545,7 @@
                         <th>Commits</th>
                         <th>Claude</th>
                         <th>Bugs/10c</th>
+                        <th>Sev/10c ↕</th>
                         <th>Percentile</th>
                     </tr>
                 </thead>
@@ -566,7 +572,8 @@
                 <div class="score-body">
                     <div class="score-claim">"The Claude releases are statistically indistinguishable from historical
                         releases"</div>
-                    <div class="score-evidence">Both releases fall inside the middle 50% of the historical distribution.
+                    <div class="score-evidence">One Claude release sits just below the IQR (v3.4.2, with zero real bugs), the other just above it.
+                        They bracket the middle of the distribution in opposite directions — neither is an outlier.
                         The exact permutation test yields a p-value of <strong>$p_value_str</strong> — pick any
                         $n_claude_releases releases at random and you'd do as bad or worse nearly half the time.
                         There is no signal of abnormality.</div>
@@ -578,7 +585,7 @@
                 <div class="score-body">
                     <div class="score-claim">"The outrage selected on a single tail event and narrativized it"</div>
                     <div class="score-evidence">A Mastodon user noticed a regression in $claude_worst_tag, saw Claude
-                        commits, and concluded causation. But $claude_worst_tag at $claude_worst_rate_str bugs/10c is at
+                        commits, and concluded causation. But $claude_worst_tag at $claude_worst_rate_str sev/10c is at
                         the $claude_worst_pctile_str percentile — elevated but not extreme. $n_higher_than_worst_claude
                         historical releases scored higher. The correlation is noise.</div>
                 </div>
@@ -601,7 +608,7 @@
                 <div class="score-verdict no">✗</div>
                 <div class="score-body">
                     <div class="score-claim">"Claude clearly made things worse"</div>
-                    <div class="score-evidence">Both Claude releases fall inside the middle 50% of historical releases.
+                    <div class="score-evidence">The Claude releases bracket the IQR — one below, one above. Neither is an outlier.
                         There is no distributional evidence of harm. The claim rests entirely on a post-hoc correlation
                         observed by a social media user.</div>
                 </div>
@@ -612,7 +619,7 @@
                 <div class="score-body">
                     <div class="score-claim">"The regressions speak for themselves"</div>
                     <div class="score-evidence">$outlier_tag — a pre-Claude release — has the highest bug rate in the
-                        dataset ($outlier_rate_str bugs/10c). Nobody noticed, because there was no AI to be angry at.
+                        dataset ($outlier_rate_str sev/10c). Nobody noticed, because there was no AI to be angry at.
                         The regressions only "speak" when you ignore the historical distribution.</div>
                 </div>
             </div>
@@ -706,7 +713,7 @@
     <!-- ═══════════ FOOTER ═══════════ -->
 
     <footer>
-        Bugs/10c Distribution — rsync · June 2026 · All data from GitHub REST API, Bugzilla, and mailing lists
+        Sev/10c Distribution — rsync · June 2026 · All data from GitHub REST API, Bugzilla, and mailing lists
     </footer>
 
 </body>
