@@ -27,6 +27,13 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
 .c .pctile{color:var(--pos);font-weight:600;margin-top:.5rem;font-size:.95rem}
 .c .iqr-tag{color:var(--pos);font-weight:700;margin-top:.5rem;font-size:.95rem}
 
+/* ── Significance card ── */
+.sig{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border-left:4px solid var(--pos)}
+.sig .p{font-size:3rem;font-weight:800;font-family:var(--m);color:var(--pos)}
+.sig .explain{font-size:.9rem;color:var(--muted);margin-top:.5rem;line-height:1.6}
+.sig .explain strong{color:var(--fg);font-weight:600}
+.sig .detail{font-size:.85rem;color:var(--muted);margin-top:.75rem;font-family:var(--m);line-height:1.8}
+
 /* ── Strip chart ── */
 .strip{
   position:relative;height:100px;margin:2.5rem 0 .5rem;
@@ -167,6 +174,20 @@ td.era{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}
     <span style="display:inline-block;width:24px;height:12px;background:rgba(0,0,0,.1);vertical-align:middle"></span>
     Outside IQR
   </span>
+</div>
+
+<h2>Is This Chance?</h2>
+<div class="sig">
+  <div class="p">p = 0.003</div>
+  <div class="explain">
+    <strong>Permutation test on WtSec/10c:</strong> if we randomly pick 2 releases out of 35,
+    what's the probability their mean WtSec/10c is at least as high as what we see for the Claude releases?
+    Only <strong>2</strong> out of <strong>595</strong> possible pairs meet that bar.
+  </div>
+  <div class="detail">
+    Claude mean WtSec/10c: 2.68 · Historical mean: 0.21 (13× higher)<br/>
+    v3.4.2: 0.88 WtSec/10c — rank 32/33 in historical distribution<br/>v3.4.3: 4.47 WtSec/10c — rank 33/33 in historical distribution
+  </div>
 </div>
 
 <h2>Claude Releases</h2>

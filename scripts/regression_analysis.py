@@ -6,6 +6,7 @@ Bugs per 10 commits for every release. Where do the Claude releases
 fall in the historical distribution? That's the whole analysis.
 """
 
+from itertools import combinations
 from pathlib import Path
 
 import duckdb
@@ -176,6 +177,30 @@ def generate_report(releases: list[dict]) -> str:
 
     strip_items = "\n  ".join(strip_parts)
 
+    # ── Permutation test (WtSec/10c) ──
+    ts_all = [r for r in releases if r["commits"] > 0 and r["wt_sec"] > 0]
+    ts_claude = [r for r in ts_all if r["is_claude"]]
+    ts_hist = [r for r in ts_all if not r["is_claude"]]
+    ts_all_rates = [r["wt_sec"] / r["commits"] * 10 for r in ts_all]
+    ts_claude_mean = np.mean([r["wt_sec"] / r["commits"] * 10 for r in ts_claude])
+    ts_hist_mean = np.mean([r["wt_sec"] / r["commits"] * 10 for r in ts_hist])
+    n_ts = len(ts_all)
+    k_ts = len(ts_claude)
+    n_extreme = sum(
+        1 for combo in combinations(range(n_ts), k_ts)
+        if np.mean([ts_all_rates[i] for i in combo]) >= ts_claude_mean
+    )
+    n_total = len(list(combinations(range(n_ts), k_ts)))
+    p_value = n_extreme / n_total
+
+    # Ranks of Claude releases in the WtSec/10c distribution
+    ts_hist_rates_sorted = sorted(r["wt_sec"] / r["commits"] * 10 for r in ts_hist)
+    claude_ranks = []
+    for r in ts_claude:
+        rate = r["wt_sec"] / r["commits"] * 10
+        rank = sum(1 for h in ts_hist_rates_sorted if h <= rate)
+        claude_ranks.append((r["tag"], rate, rank, len(ts_hist_rates_sorted)))
+
     # ── Claude cards ──
     claude_cards = ""
     for r in claude:
@@ -218,6 +243,13 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 .c .d{{font-size:.85rem;color:var(--muted);margin-top:.25rem}}
 .c .pctile{{color:var(--pos);font-weight:600;margin-top:.5rem;font-size:.95rem}}
 .c .iqr-tag{{color:var(--pos);font-weight:700;margin-top:.5rem;font-size:.95rem}}
+
+/* ── Significance card ── */
+.sig{{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:1.5rem;margin:1.5rem 0;border-left:4px solid var(--pos)}}
+.sig .p{{font-size:3rem;font-weight:800;font-family:var(--m);color:var(--pos)}}
+.sig .explain{{font-size:.9rem;color:var(--muted);margin-top:.5rem;line-height:1.6}}
+.sig .explain strong{{color:var(--fg);font-weight:600}}
+.sig .detail{{font-size:.85rem;color:var(--muted);margin-top:.75rem;font-family:var(--m);line-height:1.8}}
 
 /* ── Strip chart ── */
 .strip{{
@@ -316,6 +348,20 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
     <span style="display:inline-block;width:24px;height:12px;background:rgba(0,0,0,.1);vertical-align:middle"></span>
     Outside IQR
   </span>
+</div>
+
+<h2>Is This Chance?</h2>
+<div class="sig">
+  <div class="p">p = {p_value:.3f}</div>
+  <div class="explain">
+    <strong>Permutation test on WtSec/10c:</strong> if we randomly pick {k_ts} releases out of {n_ts},
+    what's the probability their mean WtSec/10c is at least as high as what we see for the Claude releases?
+    Only <strong>{n_extreme}</strong> out of <strong>{n_total}</strong> possible pairs meet that bar.
+  </div>
+  <div class="detail">
+    Claude mean WtSec/10c: {ts_claude_mean:.2f} · Historical mean: {ts_hist_mean:.2f} ({ts_claude_mean / ts_hist_mean:.0f}× higher)<br/>
+    {'<br/>'.join(f'{tag}: {rate:.2f} WtSec/10c — rank {rank}/{out_of} in historical distribution' for tag, rate, rank, out_of in claude_ranks)}
+  </div>
 </div>
 
 <h2>Claude Releases</h2>
