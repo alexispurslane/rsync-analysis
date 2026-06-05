@@ -17,7 +17,7 @@
   <p class="hero-subtitle">A simple distributional analysis of every rsync release with bug data. No model. No assumptions. Just placement.</p>
   <div class="hero-meta">
     Repository: <a href="https://github.com/RsyncProject/rsync">RsyncProject/rsync</a><br>
-    Method: bugs per 10 commits, historical IQR, permutation test
+    Method: bugs per 10 commits, permutation test
   </div>
 </header>
 
@@ -95,7 +95,7 @@
 <ul class="findings-list">
   <li><strong>37 releases with bug data,</strong> spanning v2.4.6 to v3.4.3</li>
   <li><strong>2 releases have Claude commits:</strong> v3.4.2 (9 Claude, 0.80 bugs/10c) and v3.4.3 (28 Claude, 6.76 bugs/10c)</li>
-  <li><strong>Both fall inside the IQR</strong> (middle 50%) of the historical distribution</li>
+  <li><strong>Both fall inside the middle 50%</strong> of the historical distribution</li>
   <li><strong>46% of random pairs</strong> of any 2 releases score equal or worse than the Claude releases</li>
   <li><strong>The historical mean is 2× the Claude mean</strong> (7.60 vs 3.78 bugs/10c)</li>
   <li><strong>No regime shift detected:</strong> runs test p=0.231, sequence is consistent with randomness</li>
@@ -161,12 +161,14 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     the middle of the distribution, not the tail.
     <br><br>
     <span style="font-family:var(--mono);font-size:0.85rem">
-    Claude mean: 3.78 · Historical mean: 7.60 · IQR: 0.65–6.82
+    Claude mean: 3.78 · Historical mean: 7.60
     </span>
   </div>
 </div>
 
-<h3>The Distribution (log scale)</h3>
+<h3>The Distribution</h3>
+
+<p>Here is where these releases fall in the distribution of all prior releases:</p>
 
 <div class="strip">
   <div class="outside" style="right:59.8%"></div>
@@ -325,7 +327,7 @@ bugs/10c = (bug_count ÷ total_commits) × 10
     <div class="score-verdict yes">✓</div>
     <div class="score-body">
       <div class="score-claim">"The Claude releases are statistically indistinguishable from historical releases"</div>
-      <div class="score-evidence">Both releases fall inside the IQR. The permutation test shows <strong>46%</strong> of random pairs score equal or worse. There is no signal of abnormality.</div>
+      <div class="score-evidence">Both releases fall inside the middle 50% of the historical distribution. The permutation test shows <strong>46%</strong> of random pairs score equal or worse. There is no signal of abnormality.</div>
     </div>
   </div>
 
