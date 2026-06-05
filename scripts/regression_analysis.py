@@ -177,29 +177,28 @@ def generate_report(releases: list[dict]) -> str:
 
     strip_items = "\n  ".join(strip_parts)
 
-    # ── Permutation test (WtSec/10c) ──
-    ts_all = [r for r in releases if r["commits"] > 0 and r["wt_sec"] > 0]
-    ts_claude = [r for r in ts_all if r["is_claude"]]
-    ts_hist = [r for r in ts_all if not r["is_claude"]]
-    ts_all_rates = [r["wt_sec"] / r["commits"] * 10 for r in ts_all]
-    ts_claude_mean = np.mean([r["wt_sec"] / r["commits"] * 10 for r in ts_claude])
-    ts_hist_mean = np.mean([r["wt_sec"] / r["commits"] * 10 for r in ts_hist])
-    n_ts = len(ts_all)
-    k_ts = len(ts_claude)
+    # ── Permutation test (Bugs/10c) ──
+    bug_all = [r for r in releases if r["bugs"] > 0 and r["commits"] > 0]
+    bug_claude = [r for r in bug_all if r["is_claude"]]
+    bug_hist = [r for r in bug_all if not r["is_claude"]]
+    bug_all_rates = [r["bugs_10c"] for r in bug_all]
+    bug_claude_mean = np.mean([r["bugs_10c"] for r in bug_claude])
+    bug_hist_mean = np.mean([r["bugs_10c"] for r in bug_hist])
+    n_bug = len(bug_all)
+    k_bug = len(bug_claude)
     n_extreme = sum(
-        1 for combo in combinations(range(n_ts), k_ts)
-        if np.mean([ts_all_rates[i] for i in combo]) >= ts_claude_mean
+        1 for combo in combinations(range(n_bug), k_bug)
+        if np.mean([bug_all_rates[i] for i in combo]) >= bug_claude_mean
     )
-    n_total = len(list(combinations(range(n_ts), k_ts)))
+    n_total = len(list(combinations(range(n_bug), k_bug)))
     p_value = n_extreme / n_total
 
-    # Ranks of Claude releases in the WtSec/10c distribution
-    ts_hist_rates_sorted = sorted(r["wt_sec"] / r["commits"] * 10 for r in ts_hist)
+    # Ranks of Claude releases in the Bugs/10c distribution
+    bug_hist_rates_sorted = sorted(r["bugs_10c"] for r in bug_hist)
     claude_ranks = []
-    for r in ts_claude:
-        rate = r["wt_sec"] / r["commits"] * 10
-        rank = sum(1 for h in ts_hist_rates_sorted if h <= rate)
-        claude_ranks.append((r["tag"], rate, rank, len(ts_hist_rates_sorted)))
+    for r in bug_claude:
+        rank = sum(1 for h in bug_hist_rates_sorted if h <= r["bugs_10c"])
+        claude_ranks.append((r["tag"], r["bugs_10c"], rank, len(bug_hist_rates_sorted)))
 
     # ── Claude cards ──
     claude_cards = ""
@@ -352,15 +351,15 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 
 <h2>Is This Chance?</h2>
 <div class="sig">
-  <div class="p">p = {p_value:.3f}</div>
+  <div class="p">p = {p_value:.2f}</div>
   <div class="explain">
-    <strong>Permutation test on WtSec/10c:</strong> if we randomly pick {k_ts} releases out of {n_ts},
-    what's the probability their mean WtSec/10c is at least as high as what we see for the Claude releases?
-    Only <strong>{n_extreme}</strong> out of <strong>{n_total}</strong> possible pairs meet that bar.
+    <strong>Permutation test on Bugs/10c:</strong> if we randomly pick {k_bug} releases out of {n_bug},
+    what's the probability their mean Bugs/10c is at least as high as what we see for the Claude releases?
+    <strong>{n_extreme}</strong> out of <strong>{n_total}</strong> possible pairs meet that bar — not rare at all.
   </div>
   <div class="detail">
-    Claude mean WtSec/10c: {ts_claude_mean:.2f} · Historical mean: {ts_hist_mean:.2f} ({ts_claude_mean / ts_hist_mean:.0f}× higher)<br/>
-    {'<br/>'.join(f'{tag}: {rate:.2f} WtSec/10c — rank {rank}/{out_of} in historical distribution' for tag, rate, rank, out_of in claude_ranks)}
+    Claude mean Bugs/10c: {bug_claude_mean:.2f} · Historical mean: {bug_hist_mean:.2f} · Claude is {'lower' if bug_claude_mean < bug_hist_mean else 'higher'}<br/>
+    {'<br/>'.join(f'{tag}: {rate:.2f} Bugs/10c — rank {rank}/{out_of} in historical distribution' for tag, rate, rank, out_of in claude_ranks)}
   </div>
 </div>
 
