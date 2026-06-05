@@ -2,7 +2,7 @@
 """
 rsync bug-rate analysis.
 
-Bugs per 1K commits for every release. Where do the Claude releases
+Bugs per 10 commits for every release. Where do the Claude releases
 fall in the historical distribution? That's the whole analysis.
 """
 
@@ -13,7 +13,6 @@ import numpy as np
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "rsync_github.duckdb"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "docs"
-
 
 def load_data(con: duckdb.DuckDBPyConnection) -> list[dict]:
     rows = con.execute("""
@@ -27,24 +26,22 @@ def load_data(con: duckdb.DuckDBPyConnection) -> list[dict]:
         [r[0], r[1], r[2], float(r[3]), r[4], r[4] > 0]
     )) for r in rows]
 
-
 def log_pct(rate: float) -> float:
-    """Map bugs/1Kc to % position on a log-4.5-decade scale (1→10K)."""
+    """Map bugs/10c to % position on a log-4.5-decade scale (0.01→100)."""
     return np.log10(rate) / 4.5 * 100 if rate > 0 else 0
-
 
 def generate_report(releases: list[dict]) -> str:
     with_data = [r for r in releases if r["bugs"] > 0 and r["commits"] > 0]
     for r in with_data:
-        r["bugs_1kc"] = r["bugs"] * 1000 / r["commits"]
+        r["bugs_10c"] = r["bugs"] * 10 / r["commits"]
 
     historical = [r for r in with_data if not r["is_claude"]]
     claude = [r for r in with_data if r["is_claude"]]
-    hist_rates = sorted(r["bugs_1kc"] for r in historical)
+    hist_rates = sorted(r["bugs_10c"] for r in historical)
 
     for r in claude:
-        r["percentile"] = np.searchsorted(hist_rates, r["bugs_1kc"]) / len(hist_rates) * 100
-        r["rank"] = sum(1 for h in hist_rates if h <= r["bugs_1kc"])
+        r["percentile"] = np.searchsorted(hist_rates, r["bugs_10c"]) / len(hist_rates) * 100
+        r["rank"] = sum(1 for h in hist_rates if h <= r["bugs_10c"])
         r["out_of"] = len(hist_rates)
 
     sorted_data = sorted(with_data, key=lambda x: x["tag"])
@@ -56,13 +53,13 @@ def generate_report(releases: list[dict]) -> str:
     q25_left = log_pct(q25)
     q75_left = log_pct(q75)
 
-    # ── Time-series (WtSec/1Kc over releases) ──
+    # ── Time-series (WtSec/10c over releases) ──
     # Only include releases with positive wt_sec so log scale works
     ts_releases = [r for r in releases if r["commits"] > 0 and r["wt_sec"] > 0]
-    ts_max = max(r["wt_sec"] / r["commits"] * 1000 for r in ts_releases)
+    ts_max = max(r["wt_sec"] / r["commits"] * 10 for r in ts_releases)
 
-    # Log scale spanning from 0.1 to just past ts_max
-    ts_log_floor = -1  # log10(0.1)
+    # Log scale spanning from 0.01 to just past ts_max
+    ts_log_floor = -2  # log10(0.01)
     ts_log_ceil = np.ceil(np.log10(ts_max * 2))
     ts_decades = ts_log_ceil - ts_log_floor
 
@@ -80,7 +77,7 @@ def generate_report(releases: list[dict]) -> str:
 
     # Y-axis gridlines
     ts_ticks = []
-    nice_vals = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
+    nice_vals = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]
     for val in nice_vals:
         if ts_log_floor <= np.log10(val) <= ts_log_ceil:
             y = ts_y(val)
@@ -94,7 +91,7 @@ def generate_report(releases: list[dict]) -> str:
     ts_bars = []
 
     for i, r in enumerate(ts_releases):
-        rate = r["wt_sec"] / r["commits"] * 1000
+        rate = r["wt_sec"] / r["commits"] * 10
         is_c = r["is_claude"]
         cx = margin_l + (i + 0.5) / n * chart_w  # center of bar
         x = cx - bar_w / 2
@@ -107,7 +104,7 @@ def generate_report(releases: list[dict]) -> str:
         ts_bars.append(
             f'<rect x="{x:.1f}" y="{y_top:.1f}" width="{bar_w:.1f}" height="{max(h, 1):.1f}" '
             f'fill="{color}" opacity="{opacity}" rx="1" class="ts-bar">'
-            f'<title>{r["tag"]}: {rate:.1f} WtSec/1Kc</title>'
+            f'<title>{r["tag"]}: {rate:.2f} WtSec/10c</title>'
             f'</rect>\n'
         )
         # Label Claude bars
@@ -137,7 +134,7 @@ def generate_report(releases: list[dict]) -> str:
             f'<td class="n">{r["commits"]}</td>'
             f'<td class="n">{r["wt_sec"]:.1f}</td>'
             f'<td class="n">{r["claude"]}</td>'
-            f'<td class="n rate">{r["bugs_1kc"]:.1f}</td>'
+            f'<td class="n rate">{r["bugs_10c"]:.2f}</td>'
             f'<td class="era">{pctile}</td></tr>\n          '
         )
 
@@ -158,13 +155,13 @@ def generate_report(releases: list[dict]) -> str:
         is_c = r["is_claude"]
         color = "#2d6a4f" if is_c else "#b44a1e"
         size = 18 if is_c else 11
-        left = log_pct(r["bugs_1kc"])
-        in_iqr = q25 <= r["bugs_1kc"] <= q75
+        left = log_pct(r["bugs_10c"])
+        in_iqr = q25 <= r["bugs_10c"] <= q75
         dot_class = "dot claude-dot" if is_c else "dot"
         strip_parts.append(
             f'<div class="{dot_class}" '
             f'style="left:{left:.1f}%;background:{color};width:{size}px;height:{size}px" '
-            f'title="{r["tag"]}: {r["bugs_1kc"]:.0f} bugs/1Kc"></div>'
+            f'title="{r["tag"]}: {r["bugs_10c"]:.2f} bugs/10c"></div>'
         )
         # Label Claude dots
         if is_c:
@@ -179,21 +176,21 @@ def generate_report(releases: list[dict]) -> str:
     # ── Claude cards ──
     claude_cards = ""
     for r in claude:
-        in_iqr = q25 <= r["bugs_1kc"] <= q75
+        in_iqr = q25 <= r["bugs_10c"] <= q75
         claude_cards += (
             f'<div class="c">'
             f'<h3>{r["tag"]}</h3>'
-            f'<div class="b">{r["bugs_1kc"]:.0f} <span class="u">bugs/1Kc</span></div>'
+            f'<div class="b">{r["bugs_10c"]:.2f} <span class="u">bugs/10c</span></div>'
             f'<div class="d">{r["bugs"]} bugs · {r["commits"]} commits · {r["claude"]} Claude</div>'
             f'<div class="d pctile">{r["percentile"]:.0f}th percentile (rank {r["rank"]} of {r["out_of"]})</div>'
-            f'<div class="d iqr-tag">{"Inside" if in_iqr else "Outside"} the middle 50% ({q25:.0f}–{q75:.0f})</div>'
+            f'<div class="d iqr-tag">{"Inside" if in_iqr else "Outside"} the middle 50% ({q25:.2f}–{q75:.2f})</div>'
             f'</div>'
         )
 
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bugs/1Kc Distribution — rsync</title>
+<title>Bugs/10c Distribution — rsync</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 :root{{--bg:#faf6f0;--fg:#3c2a1a;--muted:#7a6b5d;--accent:#b44a1e;--pos:#2d6a4f;--bdr:#d9cfc4;--s:'Inter',sans-serif;--m:'JetBrains Mono',monospace}}
@@ -295,7 +292,7 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 .ts-grid{{stroke:var(--bdr);stroke-width:.5;stroke-dasharray:4 3}}
 </style></head><body>
 
-<h1>Bugs per 1,000 Commits</h1>
+<h1>Bugs per 10 Commits</h1>
 <p class="sub">rsync releases with bug data · Where do the Claude releases sit in the distribution?</p>
 
 <h2>The Distribution (log scale)</h2>
@@ -303,7 +300,7 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   {strip_items}
 </div>
 <div class="axis">
-  <span>1</span><span>10</span><span>100</span><span>1,000</span><span>10,000</span>
+  <span>0.01</span><span>0.1</span><span>1</span><span>10</span><span>100</span>
 </div>
 <div class="legend">
   <span><i style="background:#b44a1e;opacity:.5"></i> Historical</span>
@@ -323,7 +320,7 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
   {claude_cards}
 </div>
 
-<h2>WtSec/1Kc Over Time</h2>
+<h2>WtSec/10c Over Time</h2>
 <svg class="ts-chart" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet">
   {ts_svg}
 </svg>
@@ -334,13 +331,12 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 
 <h2>All Releases (chronological)</h2>
 <table>
-  <tr><th>Release</th><th>Bugs</th><th>Commits</th><th>WtSec</th><th>Claude</th><th>Bugs/1Kc</th><th>Percentile</th></tr>
+  <tr><th>Release</th><th>Bugs</th><th>Commits</th><th>WtSec</th><th>Claude</th><th>Bugs/10c</th><th>Percentile</th></tr>
   {table_rows}
 </table>
 
 </body></html>"""
     return html
-
 
 def main() -> None:
     con = duckdb.connect(str(DB_PATH), read_only=True)
@@ -351,7 +347,6 @@ def main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
     (OUTPUT_DIR / "index.html").write_text(html)
     print(f"Written to {OUTPUT_DIR / 'index.html'}")
-
 
 if __name__ == "__main__":
     main()
