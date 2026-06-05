@@ -27,8 +27,11 @@ def load_data(con: duckdb.DuckDBPyConnection) -> list[dict]:
     )) for r in rows]
 
 def log_pct(rate: float) -> float:
-    """Map bugs/10c to % position on a log-4.5-decade scale (0.01→100)."""
-    return np.log10(rate) / 4.5 * 100 if rate > 0 else 0
+    """Map bugs/10c to % position on a log scale (0.01→300 = 0→100%)."""
+    if rate <= 0:
+        return 0
+    # 4.5 decades: log10(0.01)=-2 maps to 0%, log10(~316)=2.5 maps to 100%
+    return (np.log10(rate) + 2) / 4.5 * 100
 
 def generate_report(releases: list[dict]) -> str:
     with_data = [r for r in releases if r["bugs"] > 0 and r["commits"] > 0]
