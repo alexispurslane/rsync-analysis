@@ -229,6 +229,8 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
 .axis{{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--m);margin-top:4px}}
 .legend{{display:flex;gap:1.5rem;margin-top:.75rem;font-size:.85rem;color:var(--muted);flex-wrap:wrap}}
 .legend i{{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.3rem;vertical-align:middle}}
+.iqr-explain{{font-size:.9rem;color:var(--muted);margin-top:1rem;line-height:1.7}}
+.iqr-explain strong{{color:var(--fg);font-weight:600}}
 </style></head><body>
 
 <h1>Bugs per 10 Commits</h1>
@@ -253,6 +255,14 @@ td.era{{color:var(--pos);font-weight:600;font-size:.82rem;font-family:var(--m)}}
     Outside IQR
   </span>
 </div>
+<p class="iqr-explain">
+  Each dot is a release. The <strong>shaded green band</strong> is the interquartile range (IQR) —
+  the middle 50% of historical releases, from <strong>{q25:.2f}</strong> to <strong>{q75:.2f}</strong> bugs/10c.
+  That means half of all historical releases fall inside this band, and half fall outside.
+  The darker regions on either side are the lower and upper quarters.
+  The Claude releases (green dots) <strong>{"both fall inside" if all(q25 <= r["bugs_10c"] <= q75 for r in claude) else "don't both fall inside"} the IQR</strong> —
+  their bug rates are indistinguishable from the typical historical range.
+</p>
 
 <h2>Claude Releases</h2>
 <div class="g">
