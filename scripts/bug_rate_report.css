@@ -390,7 +390,7 @@ footer {
   position: relative;
   height: 100px;
   margin: 2.5rem 0 0.5rem;
-  background: #fff;
+  background: var(--bg);
   border-radius: 6px;
   border: 1px solid var(--border-light);
   overflow: hidden;
@@ -515,7 +515,7 @@ footer {
   margin: 1.5rem 0;
 }
 .c {
-  background: #fff;
+  background: var(--bg);
   border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 1.25rem;
