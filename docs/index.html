@@ -66,7 +66,7 @@
             <li>If you want to replicate the data and results here, and inspect exactly how they were calculated, you
                 can find the repository <a href="https://github.com/alexispurslane/rsync-analysis/">here</a>. I have
                 purposefully made it so that the pipeline can be run end to end completely from scratch, so you can see
-                the entire pipeline end-to end, with now mysterious DB blobs forcing you to trust that I didn't doctor
+                the entire pipeline end-to end, with no mysterious DB blobs forcing you to trust that I didn't doctor
                 or screw up the data. If you want to be mad about the numbers, look there first.</li>
         </ul>
 
@@ -224,25 +224,38 @@
 
         <h3>How bugs are found and attributed</h3>
 
-        <p>Bug counts come from three sources: GitHub issues in the rsync repository, the rsync Bugzilla instance, and
-            the rsync mailing list. Issues filed against the rsync project were collected via the GitHub REST API. Bugs
-            from the mailing list were identified by parsing message subjects for bug report patterns and
-            cross-referencing with the project's issue tracking. Bugzilla entries were collected via the Bugzilla API;
-            each entry has a "Version" field that explicitly states which release the bug was reported against, and bugs
-            are attributed to that release. GitHub issues and mailing-list bugs are attributed to the most recent
-            release that shipped before the bug was reported.</p>
+        <p>Bug counts come from three sources:</p>
+
+        <ol>
+            <li>GitHub issues in the rsync repository (collated via the GitHub REST API),</li>
+            <li>the rsync Bugzilla instance (collected via the API),</li>
+            <li>and the rsync mailing list.</li>
+        </ol>
+
+        <p>GitHub issues and mailing-list bugs are attributed to the most recent
+            release that shipped before the bug was reported. For Bugzilla, each entry has a "Version" field that
+            explicitly states which release the bug was reported against, and bugs
+            are attributed to that release.</p>
 
         <h3>Why this metric</h3>
 
-        <p>The critics' claim is a simple comparison: did the rate go up? The simplest honest response is a simple rate.
-            If the Claude releases sit in the middle of the historical distribution, the burden shifts to the critics to
-            explain why this particular middle is somehow worse than all the other middles that came before it.</p>
+        <p>The critics' claim is simplistic, absolute, and universalistic: the rate of bugs in the Claude-exposed
+            releases went up. Therefore, the simplest honest response is to analyize precisely what is being claimed:
+            bugs, commits, releases, and Claude-exposed commits. If the Claude releases sit in the middle of the
+            historical distribution, the burden shifts to the critics to explain why this particular middle is somehow
+            worse than all the other middles that came before it. Even if that results in is shifting the conversation
+            toward a more nuanced discussion of the <i>quality</i> and <i>type</i> and <i>user impact</i> of the bugs in
+            the releases, it will already have been a major win for the pro-AI crowd, and a shifting of the goalposts
+            for the anti-AI crowd, and then we can do further analysis based on that. And the ball's in the anti-AI
+            court for that game.</p>
 
         <h3>What this metric does not do</h3>
 
-        <p>It does not control for commit complexity, security intensity, or bug severity. It does not distinguish
+        <p>I'm aware that this metric does not control for commit complexity, security intensity, or bug severity. It
+            does not distinguish
             between a one-line typo fix and a CVE patch. It is a blunt instrument. But the critics' accusation is also
-            blunt: "Claude is making things worse." A blunt instrument is the fairest response.</p>
+            blunt: "Claude is making things worse." A blunt instrument is what is required in response. Blood begets
+            blood.</p>
 
     </section>
 
@@ -256,9 +269,14 @@
 
         <h3>Claude Releases</h3>
 
+        <p>Before we jump into deeper analysis, let's just look at the two Claude releases themselves, to get a sense
+            for them:</p>
+
         <div class="g">
             <div class="c"><h3>v3.4.2</h3><div class="b">0.80 <span class="u">bugs/10c</span></div><div class="d">4 bugs · 50 commits · 9 Claude</div><div class="d pctile">31st percentile (rank 11 of 35)</div></div><div class="c"><h3>v3.4.3</h3><div class="b">6.76 <span class="u">bugs/10c</span></div><div class="d">23 bugs · 34 commits · 28 Claude</div><div class="d pctile">74th percentile (rank 26 of 35)</div></div>
         </div>
+
+        <p>If that doesn't look like a red flag to you, you'd be right.</p>
 
         <h3>How Normal Are the Claude Releases?</h3>
 
@@ -267,8 +285,8 @@
             <div class="result-label">of random pairs match or exceed the Claude mean</div>
             <div class="result-detail">
                 271 of 595 possible pairs of 2 historical releases have mean bugs/10c
-                ≥ 3.78. Nearly half. The Claude releases sit exactly where most pairs land —
-                the middle of the distribution, not the tail.
+                ≥ 3.78. Nearly half. The Claude releases sit exactly where most pairs land:
+                the middle of the distribution.
                 <br><br>
                 <span style="font-family:var(--mono);font-size:0.85rem">
                     Claude mean: 3.78 · Historical mean: 7.59
@@ -276,9 +294,12 @@
             </div>
         </div>
 
+        <p>In other words: pretty fucking normal.</p>
+
         <h3>The Distribution</h3>
 
-        <p>Here is where these releases fall in the distribution of all prior releases:</p>
+        <p>In case you're not convinced, here's a visual aid, showing where these releases fall in the distribution of
+            all prior releases:</p>
 
         <div class="strip">
             <div class="outside" style="right:59.8%"></div>
@@ -344,25 +365,42 @@
             </span>
         </div>
         <p class="iqr-explain">
-            Each dot is a release. The <strong>shaded green band</strong> is the interquartile range (IQR) —
+            <b>How to read this graph:</b> Each dot is a release. The <strong>shaded green band</strong> is the
+            interquartile range (IQR) —
             the middle 50% of historical releases, from <strong>0.65</strong> to <strong>6.82</strong> bugs/10c.
-            Half of all historical releases fall inside this band, and half fall outside.
+            Half of all historical releases fall inside this band, and half fall outside, by definition.
             The darker regions on either side are the lower and upper quarters.
             The Claude releases (green dots) <strong>both fall inside the IQR</strong> —
-            their bug rates are indistinguishable from the typical historical range.
+            their bug rates are indistinguishable from the typical historical range. Check the numbers if you don't
+            believe the graph.
         </p>
 
         <h3>Regime Check</h3>
 
-        <p>The historical mean is 7.59 bugs/10c, but this is driven by a bimodal distribution. v2.x releases
-            average 2.04 bugs/10c; v3.x releases average 11.46. Even within v3.x, the Claude releases are
-            unremarkable: v3.4.2 ranks 4th of 21 v3.x releases, v3.4.3 ranks 13th of 21 v3.x releases.</p>
+        <p>The obvious counterargument is that maybe <i>earlier</i> rsync releases were less in maintenence-mode, and so
+            had more bugs, but <i>recent</i> rsync releases have been more stable, so comparing the two Claude-exposed
+            releases to the full historical distribution is masking the fact that they're actually outliers for their
+            regime. Luckily, there's a way to test this statistically.</p>
 
-        <p>A runs test on the 35 non-Claude releases finds 14 runs (expected 18.5 under randomness,
-            z=-1.54, <strong>p=0.123</strong>). There is no evidence of temporal clustering — the sequence
+        <p>Yes, the historical mean (7.59 bugs/10c) was driven by a bimodal distribution: v2.x releases
+            average 2.04 bugs/10c; v3.x releases average 11.46. However, even within the v3.x regime, the
+            Claude releases are
+            unremarkable: v3.4.2 ranks 4th of 21 v3.x releases, v3.4.3 ranks 13th of 21 v3.x releases, and in fact, the v3.x regime has a much <i>higher</i> mean bugs/10c,
+            which is the exact <i>opposite</i> of the kind of difference that would hurt the case of this paper and make
+            Claude-exposed releases more likely to be outliers.</p>
+
+        <p>We can further prove that there aren't meaningfully different regimes in the version history we have, and
+            thus that using the full historical data is valid, by doing a runs test. A runs test on the 35
+            non-Claude releases finds 14 runs (expected 18.5 under randomness,
+            z=-1.54, <strong>p=0.123</strong>). There is no evidence of temporal clustering, in other words.
+            The sequence
             is consistent with a random draw from the same distribution.</p>
 
-        <h3>The Outlier Nobody Noticed</h3>
+        <h3>The Pre-Claude Outlier</h3>
+
+        <p>Here's my favorite part, though. Digging into the data, one of the first things that jumped out at me with
+            blinding clarity was that <i>the worst release, by far, in rsync history</i> was <i>entirely prior to the
+                introduction of Claude</i>:</p>
 
         <div class="result-callout">
             <div class="result-number">113.33</div>
@@ -371,13 +409,15 @@
                 The highest bug rate in the entire dataset. 102 bugs in 9 commits, a hotfix
                 release
                 the day after v3.4.0. It exceeds every other release by an order of magnitude.
-                <strong>Nobody noticed.</strong> There was no AI to blame <strong>so</strong> there was no GitHub issue
-                with
-                300 comments, no death threats, no threats to fork or move to openrsync. A maintainer
-                shipped a broken release and fixed it. This happens. The only thing that made v3.4.3
-                special was the availability of an enemy <em>everyone had already decided to hate</em>.
             </div>
         </div>
+
+        <p>And yet <strong>nobody noticed.</strong> There was no AI to blame <strong>so</strong> there was no GitHub
+            issue
+            with
+            300 comments, no death threats, no threats to fork or move to openrsync. A maintainer
+            shipped a broken release and fixed it, just like normal. The only thing that made v3.4.3
+            special was the availability of an enemy <em>everyone had already decided to hate</em>.</p>
 
         <h3>All Releases (chronological)</h3>
 
