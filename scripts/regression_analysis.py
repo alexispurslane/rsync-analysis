@@ -12,7 +12,7 @@ import duckdb
 import numpy as np
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "rsync_github.duckdb"
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "docs"
 
 
 def load_data(con: duckdb.DuckDBPyConnection) -> list[dict]:
