@@ -16,6 +16,7 @@ Usage:
 import time
 import argparse
 from pathlib import Path
+import os
 
 import duckdb
 from openai import OpenAI
@@ -26,7 +27,7 @@ from severity_rubric import build_system_prompt, SEVERITY_RUBRIC, SEVERITY_RULES
 DB_PATH = Path(__file__).resolve().parent / "rsync_github.duckdb"
 
 # ── LLM config ──
-NW_API_KEY = "sk-ab97b14bb388a45ffa9a55c41cc81546f2eac1a3ea66ad48bd088c7b21aba7bc"
+NW_API_KEY = os.environ['NW_API_KEY']
 NW_BASE_URL = "https://api.neuralwatt.com/v1"
 NW_MODEL = "qwen3.6-35b-fast"
 
